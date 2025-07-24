@@ -1,130 +1,156 @@
-
 import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-from datetime import datetime
-import warnings
+import seaborn as sns
+from datetime import datetime, timedelta
+import calendar
 
-warnings.filterwarnings("ignore")
+st.set_page_config(layout="wide", page_title="Sales Dashboard", page_icon="📊")
 
-st.set_page_config(page_title="Sales Dashboard", layout="wide")
+st.title("Interactive Sales Dashboard")
 
-st.sidebar.header("📤 Upload CSV File")
-uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type=["csv"])
+uploaded_file = st.file_uploader("Upload your cleaned sales CSV file", type=["csv"])
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
 
     # Clean column names
-df.columns = df.columns.str.strip().str.upper()
+    df.columns = df.columns.str.strip().str.upper()
 
-# Check for required columns
-required_cols = ['ORDERDATE', 'SALES', 'ORDERNUMBER', 'STATUS', 'PRODUCTLINE', 'CUSTOMERNAME']
-missing_cols = [col for col in required_cols if col not in df.columns]
+    # Check for required columns
+    required_cols = ['ORDERDATE', 'SALES', 'ORDERNUMBER', 'STATUS', 'PRODUCTLINE', 'CUSTOMERNAME']
+    missing_cols = [col for col in required_cols if col not in df.columns]
 
-if missing_cols:
-    st.error(f"Missing required columns: {', '.join(missing_cols)}. Please check your CSV and try again.")
-    st.stop()
+    if missing_cols:
+        st.error(f"Missing required columns: {', '.join(missing_cols)}. Please check your CSV and try again.")
+        st.stop()
 
-# Convert ORDERDATE
-df['ORDERDATE'] = pd.to_datetime(df['ORDERDATE'], errors='coerce')
+    # Convert ORDERDATE
+    df['ORDERDATE'] = pd.to_datetime(df['ORDERDATE'], errors='coerce')
 
-    # Convert dates and create Month
-    df['ORDERDATE'] = pd.to_datetime(df['ORDERDATE'])
-    df['Month'] = df['ORDERDATE'].dt.to_period('M')
-    latest_month = df['Month'].max()
-    previous_month = df['Month'].sort_values().unique()[-2]
+    # Drop rows with invalid dates
+    df = df.dropna(subset=['ORDERDATE'])
 
-    # Currency formatting helper
-    def format_currency(x): return f"£{x:,.2f}"
+    # Add month-year column for grouping
+    df['MONTH_YEAR'] = df['ORDERDATE'].dt.to_period('M')
 
-    # Overall Revenue
-    total_revenue = df['SALES'].sum()
-    total_orders = df['ORDERNUMBER'].nunique()
-    avg_order_value = total_revenue / total_orders
+    # Monthly Revenue by Product Line
+    monthly_revenue = df.groupby(['MONTH_YEAR', 'PRODUCTLINE'])['SALES'].sum().reset_index()
+    monthly_revenue['MONTH_YEAR'] = monthly_revenue['MONTH_YEAR'].dt.to_timestamp()
 
-    # Shipment Status
-    shipped = df[df['STATUS'] == 'Shipped']['ORDERNUMBER'].nunique()
-    on_hold = df[df['STATUS'] == 'On Hold']['ORDERNUMBER'].nunique()
-    cancelled = df[df['STATUS'] == 'Cancelled']['ORDERNUMBER'].nunique()
+    # Overall revenue
+    overall_revenue = df['SALES'].sum()
+    formatted_overall_revenue = f"£{overall_revenue:,.2f}"
 
-    # Last Month Orders
-    last_month_orders = df[df['Month'] == latest_month]['ORDERNUMBER'].nunique()
+    # Total orders last month
+    last_month = df['ORDERDATE'].max().to_period('M')
+    last_month_start = last_month.to_timestamp()
+    last_month_end = (last_month + 1).to_timestamp() - pd.Timedelta(seconds=1)
+    last_month_orders = df[(df['ORDERDATE'] >= last_month_start) & (df['ORDERDATE'] <= last_month_end)]
+    total_orders_last_month = last_month_orders['ORDERNUMBER'].nunique()
 
-    # KPIs
-    st.title("📊 1080p Sales Dashboard Summary")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("💰 Total Revenue", format_currency(total_revenue))
-    col2.metric("📦 Total Orders", total_orders)
-    col3.metric("💳 Avg. Order Value", format_currency(avg_order_value))
-    col4.metric(f"🗓 Orders in {latest_month}", last_month_orders)
+    # Total orders shipped and not shipped (on hold)
+    shipped_orders = df[df['STATUS'].str.lower() == 'shipped']['ORDERNUMBER'].nunique()
+    on_hold_orders = df[df['STATUS'].str.lower() == 'on hold']['ORDERNUMBER'].nunique()
 
-    st.markdown("### 🚚 Shipment Overview")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("✅ Shipped", shipped)
-    col2.metric("⏳ On Hold", on_hold)
-    col3.metric("❌ Cancelled", cancelled)
+    # Top 5 products by revenue
+    top_products = df.groupby('PRODUCTLINE')['SALES'].sum().sort_values(ascending=False).head(5).reset_index()
 
-    # Monthly Revenue Chart
-    st.markdown("### 📅 Monthly Revenue")
-    monthly_revenue = df.groupby('Month')['SALES'].sum()
-    st.line_chart(monthly_revenue)
-
-    # Top 5 Products
-    st.markdown("### 🏆 Top 5 Products by Revenue")
-    top_products = df.groupby('PRODUCTLINE')['SALES'].sum().sort_values(ascending=False).head(5)
-    st.bar_chart(top_products)
-
-    # Pie Chart: Sales Distribution
-    st.markdown("### 🥧 Sales by Product Line")
+    # Pie chart for sales distribution by product line
+    pie_data = df.groupby('PRODUCTLINE')['SALES'].sum()
     fig1, ax1 = plt.subplots()
-    df.groupby('PRODUCTLINE')['SALES'].sum().plot(kind='pie', ax=ax1, autopct='%1.1f%%', ylabel='')
+    ax1.pie(pie_data, labels=pie_data.index, autopct='%1.1f%%', startangle=140)
+    ax1.axis('equal')  # Equal aspect ratio ensures pie is drawn as a circle.
+
+    # Country wise performance (revenue and orders)
+    country_perf = df.groupby('COUNTRY').agg({'SALES': 'sum', 'ORDERNUMBER': 'nunique'}).reset_index()
+    best_country = country_perf.loc[country_perf['SALES'].idxmax()]
+    worst_country = country_perf.loc[country_perf['SALES'].idxmin()]
+
+    # Customer behavior
+    total_customers = df['CUSTOMERNAME'].nunique()
+    top_customers = df.groupby('CUSTOMERNAME')['SALES'].sum().sort_values(ascending=False).head(5).reset_index()
+
+    # Risk customers: top customers with no orders in last 3 months
+    three_months_ago = df['ORDERDATE'].max() - pd.DateOffset(months=3)
+    recent_customers = df[df['ORDERDATE'] >= three_months_ago]['CUSTOMERNAME'].unique()
+    risk_customers = top_customers[~top_customers['CUSTOMERNAME'].isin(recent_customers)]
+
+    # Forecast next month revenue (simple MoM growth average)
+    monthly_totals = df.groupby('MONTH_YEAR')['SALES'].sum().reset_index()
+    monthly_totals['MONTH_YEAR'] = monthly_totals['MONTH_YEAR'].dt.to_timestamp()
+    monthly_totals = monthly_totals.sort_values('MONTH_YEAR')
+    monthly_totals['PCT_CHANGE'] = monthly_totals['SALES'].pct_change()
+    avg_growth = monthly_totals['PCT_CHANGE'].mean()
+
+    last_month_revenue = monthly_totals.iloc[-1]['SALES']
+    forecast_next_month_revenue = last_month_revenue * (1 + avg_growth)
+    forecast_next_month_revenue = max(forecast_next_month_revenue, 0)  # avoid negative forecasts
+    formatted_forecast = f"£{forecast_next_month_revenue:,.2f}"
+
+    # Top 3 growth products next month forecast
+    product_monthly = df.groupby(['PRODUCTLINE', 'MONTH_YEAR'])['SALES'].sum().reset_index()
+    product_monthly['MONTH_YEAR'] = product_monthly['MONTH_YEAR'].dt.to_timestamp()
+
+    growth_data = []
+    products = product_monthly['PRODUCTLINE'].unique()
+    for product in products:
+        data = product_monthly[product_monthly['PRODUCTLINE'] == product].sort_values('MONTH_YEAR')
+        if len(data) < 2:
+            continue
+        pct_change = (data.iloc[-1]['SALES'] - data.iloc[-2]['SALES']) / data.iloc[-2]['SALES']
+        forecast = data.iloc[-1]['SALES'] * (1 + pct_change)
+        growth_data.append({
+            'PRODUCTLINE': product,
+            'LAST_MONTH_SALES': data.iloc[-1]['SALES'],
+            'PCT_GROWTH': pct_change,
+            'FORECAST_NEXT_MONTH': max(forecast, 0)
+        })
+    growth_df = pd.DataFrame(growth_data)
+    top_growth = growth_df.sort_values('PCT_GROWTH', ascending=False).head(3)
+
+    # Display section
+    st.markdown("## Key Metrics")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Overall Revenue", formatted_overall_revenue)
+    col2.metric(f"Total Orders Last Month ({last_month.strftime('%B %Y')})", total_orders_last_month)
+    col3.metric("Shipped Orders", shipped_orders)
+    st.metric("On Hold Orders", on_hold_orders)
+
+    st.markdown("## Top 5 Products by Revenue")
+    st.dataframe(top_products)
+
+    st.markdown("## Sales Distribution by Product Line")
     st.pyplot(fig1)
 
-    # Country Performance
-    st.markdown("### 🌍 Country-wise Revenue Performance")
-    country_revenue = df.groupby('COUNTRY')['SALES'].sum().sort_values(ascending=False)
-    best_country = country_revenue.idxmax()
-    worst_country = country_revenue.idxmin()
-    st.write(f"📈 Best Performing: {best_country} ({format_currency(country_revenue.max())})")
-    st.write(f"📉 Least Performing: {worst_country} ({format_currency(country_revenue.min())})")
-    st.dataframe(country_revenue)
+    st.markdown("## Country Performance")
+    st.write(f"Best Performing Country: **{best_country['COUNTRY']}** with £{best_country['SALES']:,.2f} revenue and {best_country['ORDERNUMBER']} orders.")
+    st.write(f"Worst Performing Country: **{worst_country['COUNTRY']}** with £{worst_country['SALES']:,.2f} revenue and {worst_country['ORDERNUMBER']} orders.")
+    st.dataframe(country_perf)
 
-    # Customer Behaviour
-    st.markdown("### 👥 Customer Behavior Analysis")
-    total_customers = df['CUSTOMERNAME'].nunique()
-    top_customers = df.groupby('CUSTOMERNAME')['SALES'].sum().sort_values(ascending=False).head(5)
-    last_order = df.groupby('CUSTOMERNAME')['ORDERDATE'].max()
-    latest_date = df['ORDERDATE'].max()
-    risk_customers = last_order[(latest_date - last_order) > pd.Timedelta(days=90)].loc[top_customers.index]
-
-    st.write(f"Total Customers: {total_customers}")
-    st.write("Top 5 Customers by Value")
+    st.markdown("## Customer Behavior")
+    st.write(f"Total Unique Customers: {total_customers}")
+    st.write("Top 5 Customers by Purchase Value:")
     st.dataframe(top_customers)
-    st.write("⚠️ Risk Customers (Top customers with no order in last 3 months):")
+    st.write("Risk Customers (Top 5 customers with no orders in last 3 months):")
     st.dataframe(risk_customers)
 
-    # Forecasting
-    st.markdown("### 🔮 Next Month Forecast")
-    growth_rate = monthly_revenue.pct_change().mean()
-    next_month_prediction = monthly_revenue.iloc[-1] * (1 + growth_rate)
-    predicted_orders = last_month_orders * (1 + growth_rate)
+    st.markdown("## Next Month Revenue Forecast")
+    st.write(f"Forecasted Revenue for next month: **{formatted_forecast}** (based on average month-over-month growth of {avg_growth:.2%})")
 
-    st.write(f"Expected Revenue Next Month: **{format_currency(next_month_prediction)}**")
-    st.write(f"Expected Orders Next Month: **{int(predicted_orders)}**")
-    st.write(f"Confidence based on Avg. MoM Growth: **{growth_rate:.2%}**")
+    st.markdown("## Top 3 Growth Products and Forecast")
+    st.dataframe(top_growth[['PRODUCTLINE', 'PCT_GROWTH', 'FORECAST_NEXT_MONTH']].style.format({
+        'PCT_GROWTH': '{:.2%}',
+        'FORECAST_NEXT_MONTH': '£{:,.2f}'
+    }))
 
-    # Top 3 Growth Products
-    st.markdown("### 📈 Top 3 Growth Products")
-    monthly_product_sales = df.groupby(['Month', 'PRODUCTLINE'])['SALES'].sum().reset_index()
-    last_month_sales = monthly_product_sales[monthly_product_sales['Month'] == latest_month]
-    prev_month_sales = monthly_product_sales[monthly_product_sales['Month'] == previous_month]
+    st.markdown("### Forecast Logic Insights")
+    st.write("""
+    The forecast is calculated based on the average month-over-month growth rate observed historically in the sales data.
+    For each product, the recent percentage change in sales is used to estimate next month's sales.
+    Negative growth is capped at zero to avoid unrealistic negative sales predictions.
+    """)
 
-    merged = pd.merge(last_month_sales, prev_month_sales, on='PRODUCTLINE', suffixes=('_latest', '_prev'))
-    merged['Growth'] = (merged['SALES_latest'] - merged['SALES_prev']) / merged['SALES_prev']
-    top_growth = merged.sort_values(by='Growth', ascending=False).head(3)
-
-    st.dataframe(top_growth[['PRODUCTLINE', 'Growth']])
-    st.markdown("Growth is calculated as percentage increase in sales from previous month to latest.")
 else:
-    st.info("Please upload a CSV file from the sidebar to begin.")
+    st.info("Please upload a CSV file to begin analysis.")
