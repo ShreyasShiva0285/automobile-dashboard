@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(page_title="Sales Dashboard", layout="wide")
-
 st.title("Automobile Sales Dashboard")
 
 uploaded_file = st.file_uploader("Upload your sales CSV file", type=["csv"])
@@ -10,35 +9,39 @@ uploaded_file = st.file_uploader("Upload your sales CSV file", type=["csv"])
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
-    # Ensure ORDERDATE is datetime
-    df['ORDERDATE'] = pd.to_datetime(df['ORDERDATE'])
+    # Show available columns
+    st.write("🔍 Columns found in uploaded file:")
+    st.write(df.columns.tolist())
 
-    # Calculations for Executive Summary
-    overall_revenue = df['SALES'].sum()
+    if 'ORDERDATE' not in df.columns:
+        st.error("❌ 'ORDERDATE' column not found. Please check your CSV file.")
+    else:
+        df['ORDERDATE'] = pd.to_datetime(df['ORDERDATE'])
 
-    # Define last month range
-    last_order_date = df['ORDERDATE'].max()
-    last_month_end = last_order_date.replace(day=1) - pd.Timedelta(days=1)
-    last_month_start = last_month_end.replace(day=1)
+        # Executive Summary Calculations
+        overall_revenue = df['SALES'].sum()
 
-    last_month_data = df[(df['ORDERDATE'] >= last_month_start) & (df['ORDERDATE'] <= last_month_end)]
+        last_order_date = df['ORDERDATE'].max()
+        last_month_end = last_order_date.replace(day=1) - pd.Timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
 
-    revenue_last_month = last_month_data['SALES'].sum()
-    orders_last_month = last_month_data['ORDERNUMBER'].nunique()
-    shipped_orders = df[df['STATUS'] == 'Shipped']['ORDERNUMBER'].nunique()
-    on_hold_orders = df[df['STATUS'] == 'On Hold']['ORDERNUMBER'].nunique()
+        last_month_data = df[(df['ORDERDATE'] >= last_month_start) & (df['ORDERDATE'] <= last_month_end)]
 
-    def format_currency(value):
-        return f"£{value:,.2f}"
+        revenue_last_month = last_month_data['SALES'].sum()
+        orders_last_month = last_month_data['ORDERNUMBER'].nunique()
+        shipped_orders = df[df['STATUS'] == 'Shipped']['ORDERNUMBER'].nunique()
+        on_hold_orders = df[df['STATUS'] == 'On Hold']['ORDERNUMBER'].nunique()
 
-    st.header("Executive Summary")
+        def format_currency(value):
+            return f"£{value:,.2f}"
 
-    col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Overall Revenue", format_currency(overall_revenue))
-    col2.metric("Revenue Last Month", format_currency(revenue_last_month))
-    col3.metric("Total Orders Last Month", f"{orders_last_month}")
-    col4.metric("Shipped Orders", f"{shipped_orders}")
-    col5.metric("On Hold Orders", f"{on_hold_orders}")
+        st.header("Executive Summary")
+        col1, col2, col3, col4, col5 = st.columns(5)
+        col1.metric("Overall Revenue", format_currency(overall_revenue))
+        col2.metric("Revenue Last Month", format_currency(revenue_last_month))
+        col3.metric("Total Orders Last Month", f"{orders_last_month}")
+        col4.metric("Shipped Orders", f"{shipped_orders}")
+        col5.metric("On Hold Orders", f"{on_hold_orders}")
 
     # Top 5 products by revenue
     top_products = df.groupby('PRODUCTLINE')['SALES'].sum().sort_values(ascending=False).head(5).reset_index()
