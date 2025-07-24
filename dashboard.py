@@ -35,25 +35,44 @@ if uploaded_file is not None:
     # Add month-year column for grouping
     df['MONTH_YEAR'] = df['ORDERDATE'].dt.to_period('M')
 
-    # Monthly Revenue by Product Line
-    monthly_revenue = df.groupby(['MONTH_YEAR', 'PRODUCTLINE'])['SALES'].sum().reset_index()
-    monthly_revenue['MONTH_YEAR'] = monthly_revenue['MONTH_YEAR'].dt.to_timestamp()
 
-    # Overall revenue
-    overall_revenue = df['SALES'].sum()
-    formatted_overall_revenue = f"£{overall_revenue:,.2f}"
+# Ensure ORDERDATE is in datetime
+df['ORDERDATE'] = pd.to_datetime(df['ORDERDATE'])
 
-    # Total orders last month
-    last_month = df['ORDERDATE'].max().to_period('M')
-    last_month_start = last_month.to_timestamp()
-    last_month_end = (last_month + 1).to_timestamp() - pd.Timedelta(seconds=1)
-    last_month_orders = df[(df['ORDERDATE'] >= last_month_start) & (df['ORDERDATE'] <= last_month_end)]
-    total_orders_last_month = last_month_orders['ORDERNUMBER'].nunique()
+# Create MONTH_YEAR column
+df['MONTH_YEAR'] = df['ORDERDATE'].dt.to_period('M')
 
-    # Total orders shipped and not shipped (on hold)
-    shipped_orders = df[df['STATUS'].str.lower() == 'shipped']['ORDERNUMBER'].nunique()
-    on_hold_orders = df[df['STATUS'].str.lower() == 'on hold']['ORDERNUMBER'].nunique()
+# Overall Revenue
+overall_revenue = df['SALES'].sum()
+formatted_overall_revenue = f"£{overall_revenue:,.2f}"
 
+# Last Month
+last_month = df['MONTH_YEAR'].max()
+df_last_month = df[df['MONTH_YEAR'] == last_month]
+
+# Revenue Last Month
+last_month_revenue = df_last_month['SALES'].sum()
+formatted_last_month_revenue = f"£{last_month_revenue:,.2f}"
+
+# Total Orders Last Month
+total_orders_last_month = df_last_month['ORDERNUMBER'].nunique()
+
+# Shipped Orders
+shipped_orders = df[df['STATUS'].str.lower() == 'shipped']['ORDERNUMBER'].nunique()
+
+# On Hold Orders
+on_hold_orders = df[df['STATUS'].str.lower() == 'on hold']['ORDERNUMBER'].nunique()
+
+# --- Display in KPI boxes ---
+st.markdown("## Executive Summary")
+
+col1, col2, col3, col4, col5 = st.columns(5)
+
+col1.metric("💰 Overall Revenue", formatted_overall_revenue)
+col2.metric("📅 Revenue Last Month", formatted_last_month_revenue)
+col3.metric("🧾 Orders Last Month", total_orders_last_month)
+col4.metric("✅ Shipped Orders", shipped_orders)
+col5.metric("⏸️ On Hold Orders", on_hold_orders)
     # Top 5 products by revenue
     top_products = df.groupby('PRODUCTLINE')['SALES'].sum().sort_values(ascending=False).head(5).reset_index()
 
@@ -111,7 +130,7 @@ if uploaded_file is not None:
     top_growth = growth_df.sort_values('PCT_GROWTH', ascending=False).head(3)
 
     # Display section
-    st.markdown("## Key Metrics")
+    st.markdown("## Executive Summary")
     col1, col2, col3 = st.columns(3)
     col1.metric("Overall Revenue", formatted_overall_revenue)
     col2.metric(f"Total Orders Last Month ({last_month.strftime('%B %Y')})", total_orders_last_month)
