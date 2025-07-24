@@ -9,12 +9,9 @@ st.title("🚗 Automobile Sales Dashboard")
 uploaded_file = st.file_uploader("Upload your cleaned sales CSV file", type=["csv"])
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-
-    # Normalize column names: strip spaces, uppercase, remove spaces inside
+    
+    # Normalize column names: uppercase, strip spaces
     df.columns = df.columns.str.strip().str.upper().str.replace(' ', '')
-
-    # Show columns detected (debug)
-    st.write("Columns in uploaded CSV:", df.columns.tolist())
 
     required_cols = ['SALES', 'ORDERNUMBER', 'PRODUCTLINE', 'STATUS', 'CUSTOMERNAME', 'COUNTRY', 'ORDERDATE']
     missing_cols = [col for col in required_cols if col not in df.columns]
@@ -26,23 +23,23 @@ if uploaded_file:
         df['ORDERDATE'] = pd.to_datetime(df['ORDERDATE'])
         df['MONTH_YEAR'] = df['ORDERDATE'].dt.to_period('M')
 
-        st.header("Executive Summary")
-        # KPIs
+        # Executive Summary KPIs
         overall_revenue = df['SALES'].sum()
         last_month = df['MONTH_YEAR'].max()
         last_month_data = df[df['MONTH_YEAR'] == last_month]
 
         revenue_last_month = last_month_data['SALES'].sum()
         total_orders_last_month = last_month_data['ORDERNUMBER'].nunique()
-        shipped_orders = df[df['STATUS'] == 'Shipped'].shape[0]
-        on_hold_orders = df[df['STATUS'] == 'On Hold'].shape[0]
+        shipped_orders = df[df['STATUS'].str.lower() == 'shipped'].shape[0]
+        on_hold_orders = df[df['STATUS'].str.lower() == 'on hold'].shape[0]
 
-        col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric("Overall Revenue", f"£{overall_revenue:,.2f}")
-        col2.metric("Revenue Last Month", f"£{revenue_last_month:,.2f}")
-        col3.metric("Total Orders Last Month", f"{total_orders_last_month}")
-        col4.metric("Orders Shipped", f"{shipped_orders}")
-        col5.metric("Orders On Hold", f"{on_hold_orders}")
+        st.header("Executive Summary")
+        kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
+        kpi1.metric("Overall Revenue", f"£{overall_revenue:,.2f}")
+        kpi2.metric("Revenue Last Month", f"£{revenue_last_month:,.2f}")
+        kpi3.metric("Total Orders Last Month", f"{total_orders_last_month}")
+        kpi4.metric("Orders Shipped", f"{shipped_orders}")
+        kpi5.metric("Orders On Hold", f"{on_hold_orders}")
 
         # Top 5 Products by Revenue
         st.subheader("Top 5 Products by Revenue")
@@ -98,15 +95,13 @@ if uploaded_file:
         col6.metric("Predicted Revenue Next Month", f"£{predicted_revenue:,.2f}", f"{sales_growth*100:.2f}%")
         col7.metric("Predicted Orders Next Month", f"{int(predicted_orders)}", f"{orders_growth*100:.2f}%")
 
-        # Top 3 Growth Products
+        # Top 3 Growth Products (Month-over-Month %)
         st.subheader("Top 3 Growth Products (Month-over-Month %)")
 
-        # Calculate product growth correctly
         monthly_prod_sales = df.groupby(['PRODUCTLINE', 'MONTH_YEAR'])['SALES'].sum().reset_index()
         monthly_prod_sales = monthly_prod_sales.sort_values(['PRODUCTLINE', 'MONTH_YEAR'])
         monthly_prod_sales['Growth'] = monthly_prod_sales.groupby('PRODUCTLINE')['SALES'].pct_change()
 
-        # Get latest month data
         latest_month = monthly_prod_sales['MONTH_YEAR'].max()
         last_month_growth = monthly_prod_sales[monthly_prod_sales['MONTH_YEAR'] == latest_month]
         last_month_growth = last_month_growth.dropna(subset=['Growth'])
@@ -114,5 +109,6 @@ if uploaded_file:
         top_growth_products = last_month_growth.sort_values('GrowthRate (%)', ascending=False).head(3)
 
         st.dataframe(top_growth_products[['PRODUCTLINE', 'GrowthRate (%)']])
+
 else:
     st.info("Please upload your cleaned sales CSV file to proceed.")
