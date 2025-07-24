@@ -1,47 +1,58 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from datetime import datetime, timedelta
+import calendar
 
-st.set_page_config(page_title="Sales Dashboard", layout="wide")
-st.title("Automobile Sales Dashboard")
+st.set_page_config(layout="wide", page_title="Sales Dashboard", page_icon="📊")
 
-uploaded_file = st.file_uploader("Upload your sales CSV file", type=["csv"])
+st.title("Interactive Sales Dashboard")
 
-if uploaded_file:
+uploaded_file = st.file_uploader("Upload your cleaned sales CSV file", type=["csv"])
+
+if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
 
-    # Show available columns
-    st.write("🔍 Columns found in uploaded file:")
-    st.write(df.columns.tolist())
+    # Clean column names
+    df.columns = df.columns.str.strip().str.upper()
 
-    if 'ORDERDATE' not in df.columns:
-        st.error("❌ 'ORDERDATE' column not found. Please check your CSV file.")
-    else:
-        df['ORDERDATE'] = pd.to_datetime(df['ORDERDATE'])
+    # Check for required columns
+    required_cols = ['ORDERDATE', 'SALES', 'ORDERNUMBER', 'STATUS', 'PRODUCTLINE', 'CUSTOMERNAME']
+    missing_cols = [col for col in required_cols if col not in df.columns]
 
-        # Executive Summary Calculations
-        overall_revenue = df['SALES'].sum()
+    if missing_cols:
+        st.error(f"Missing required columns: {', '.join(missing_cols)}. Please check your CSV and try again.")
+        st.stop()
 
-        last_order_date = df['ORDERDATE'].max()
-        last_month_end = last_order_date.replace(day=1) - pd.Timedelta(days=1)
-        last_month_start = last_month_end.replace(day=1)
+    # Convert ORDERDATE
+    df['ORDERDATE'] = pd.to_datetime(df['ORDERDATE'], errors='coerce')
 
-        last_month_data = df[(df['ORDERDATE'] >= last_month_start) & (df['ORDERDATE'] <= last_month_end)]
+    # Drop rows with invalid dates
+    df = df.dropna(subset=['ORDERDATE'])
 
-        revenue_last_month = last_month_data['SALES'].sum()
-        orders_last_month = last_month_data['ORDERNUMBER'].nunique()
-        shipped_orders = df[df['STATUS'] == 'Shipped']['ORDERNUMBER'].nunique()
-        on_hold_orders = df[df['STATUS'] == 'On Hold']['ORDERNUMBER'].nunique()
+    # Add month-year column for grouping
+    df['MONTH_YEAR'] = df['ORDERDATE'].dt.to_period('M')
 
-        def format_currency(value):
-            return f"£{value:,.2f}"
+    # Monthly Revenue by Product Line
+    monthly_revenue = df.groupby(['MONTH_YEAR', 'PRODUCTLINE'])['SALES'].sum().reset_index()
+    monthly_revenue['MONTH_YEAR'] = monthly_revenue['MONTH_YEAR'].dt.to_timestamp()
 
-        st.header("Executive Summary")
-        col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric("Overall Revenue", format_currency(overall_revenue))
-        col2.metric("Revenue Last Month", format_currency(revenue_last_month))
-        col3.metric("Total Orders Last Month", f"{orders_last_month}")
-        col4.metric("Shipped Orders", f"{shipped_orders}")
-        col5.metric("On Hold Orders", f"{on_hold_orders}")
+    # Overall revenue
+    overall_revenue = df['SALES'].sum()
+    formatted_overall_revenue = f"£{overall_revenue:,.2f}"
+
+    # Total orders last month
+    last_month = df['ORDERDATE'].max().to_period('M')
+    last_month_start = last_month.to_timestamp()
+    last_month_end = (last_month + 1).to_timestamp() - pd.Timedelta(seconds=1)
+    last_month_orders = df[(df['ORDERDATE'] >= last_month_start) & (df['ORDERDATE'] <= last_month_end)]
+    total_orders_last_month = last_month_orders['ORDERNUMBER'].nunique()
+
+    # Total orders shipped and not shipped (on hold)
+    shipped_orders = df[df['STATUS'].str.lower() == 'shipped']['ORDERNUMBER'].nunique()
+    on_hold_orders = df[df['STATUS'].str.lower() == 'on hold']['ORDERNUMBER'].nunique()
 
     # Top 5 products by revenue
     top_products = df.groupby('PRODUCTLINE')['SALES'].sum().sort_values(ascending=False).head(5).reset_index()
