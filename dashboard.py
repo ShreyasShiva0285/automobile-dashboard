@@ -10,14 +10,22 @@ uploaded_file = st.file_uploader("Upload your cleaned sales CSV file", type=["cs
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
-    # Dynamically find date column (any column with 'date' in its name, case-insensitive)
+    # Required columns for the dashboard
+    required_cols = ['SALES', 'ORDERNUMBER', 'PRODUCTLINE', 'STATUS', 'CUSTOMERNAME', 'COUNTRY']
+    missing_cols = [col for col in required_cols if col not in df.columns]
+
+    # Check for date column
     date_cols = [col for col in df.columns if 'date' in col.lower()]
     if not date_cols:
-        st.error("No date column found. Please upload a CSV with a date column.")
+        st.error("No date column found in your file. Please upload a CSV with a date column.")
         st.stop()
     date_col = date_cols[0]
 
-    # Convert detected date column to datetime
+    if missing_cols:
+        st.error(f"Missing required columns in the uploaded file: {', '.join(missing_cols)}")
+        st.stop()
+
+    # Convert date column to datetime
     df[date_col] = pd.to_datetime(df[date_col])
     df['MONTH_YEAR'] = df[date_col].dt.to_period('M')
 
