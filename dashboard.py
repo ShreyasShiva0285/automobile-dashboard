@@ -15,6 +15,20 @@ uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type=["csv"])
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
 
+    # Clean column names
+df.columns = df.columns.str.strip().str.upper()
+
+# Check for required columns
+required_cols = ['ORDERDATE', 'SALES', 'ORDERNUMBER', 'STATUS', 'PRODUCTLINE', 'CUSTOMERNAME']
+missing_cols = [col for col in required_cols if col not in df.columns]
+
+if missing_cols:
+    st.error(f"Missing required columns: {', '.join(missing_cols)}. Please check your CSV and try again.")
+    st.stop()
+
+# Convert ORDERDATE
+df['ORDERDATE'] = pd.to_datetime(df['ORDERDATE'], errors='coerce')
+
     # Convert dates and create Month
     df['ORDERDATE'] = pd.to_datetime(df['ORDERDATE'])
     df['Month'] = df['ORDERDATE'].dt.to_period('M')
