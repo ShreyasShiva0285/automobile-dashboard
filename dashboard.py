@@ -110,7 +110,7 @@ if uploaded_file is not None:
     past_sales = df[df['MONTH'] == previous_month].groupby('PRODUCTLINE')['SALES'].sum()
     growth = ((current_sales - past_sales) / past_sales).dropna().sort_values(ascending=False).head(3)
     growth_df = growth.reset_index().rename(columns={'SALES': 'GrowthRate'})
-    growth_df['GrowthRate'] = growth_df[0] * 100
+    growth_df['GrowthRate'] = growth_df['Growth'] * 100
     st.dataframe(growth_df[['PRODUCTLINE', 'GrowthRate']])
 
 else:
