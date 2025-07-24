@@ -10,9 +10,16 @@ uploaded_file = st.file_uploader("Upload your cleaned sales CSV file", type=["cs
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
-    # Ensure date column is datetime
-    df['ORDERDATE'] = pd.to_datetime(df['ORDERDATE'])
-    df['MONTH_YEAR'] = df['ORDERDATE'].dt.to_period('M')
+    # Dynamically find date column (any column with 'date' in its name, case-insensitive)
+    date_cols = [col for col in df.columns if 'date' in col.lower()]
+    if not date_cols:
+        st.error("No date column found. Please upload a CSV with a date column.")
+        st.stop()
+    date_col = date_cols[0]
+
+    # Convert detected date column to datetime
+    df[date_col] = pd.to_datetime(df[date_col])
+    df['MONTH_YEAR'] = df[date_col].dt.to_period('M')
 
     # Executive Summary KPIs
     overall_revenue = df['SALES'].sum()
@@ -31,7 +38,7 @@ if uploaded_file:
     col4.metric("Orders Shipped", f"{shipped_orders}")
     col5.metric("Orders On Hold", f"{on_hold_orders}")
 
-    # Monthly Revenue by Product Line (Not charted but retained for internal calc)
+    # Monthly Revenue by Product Line (for internal calc)
     monthly_revenue = df.groupby(['MONTH_YEAR', 'PRODUCTLINE'])['SALES'].sum().reset_index()
     monthly_revenue['MONTH_YEAR'] = monthly_revenue['MONTH_YEAR'].dt.to_timestamp()
 
@@ -59,12 +66,12 @@ if uploaded_file:
     top_customers = df.groupby('CUSTOMERNAME')['SALES'].sum().sort_values(ascending=False).head(5).reset_index()
 
     # Risk customers = no orders in last 3 months
-    last_date = df['ORDERDATE'].max()
+    last_date = df[date_col].max()
     three_months_ago = last_date - pd.DateOffset(months=3)
     top_customer_names = top_customers['CUSTOMERNAME']
     risk_customers = []
     for customer in top_customer_names:
-        last_order = df[df['CUSTOMERNAME'] == customer]['ORDERDATE'].max()
+        last_order = df[df['CUSTOMERNAME'] == customer][date_col].max()
         if last_order < three_months_ago:
             risk_customers.append({"Customer": customer, "Last Order Date": last_order.date()})
 
@@ -93,12 +100,10 @@ if uploaded_file:
     # Top 3 Growth Products
     st.subheader("Top 3 Growth Products (Month-over-Month %)")
 
-    # Calculate product growth correctly
     monthly_prod_sales = df.groupby(['PRODUCTLINE', 'MONTH_YEAR'])['SALES'].sum().reset_index()
     monthly_prod_sales = monthly_prod_sales.sort_values(['PRODUCTLINE', 'MONTH_YEAR'])
     monthly_prod_sales['Growth'] = monthly_prod_sales.groupby('PRODUCTLINE')['SALES'].pct_change()
 
-    # Get latest month data
     latest_month = monthly_prod_sales['MONTH_YEAR'].max()
     last_month_growth = monthly_prod_sales[monthly_prod_sales['MONTH_YEAR'] == latest_month]
     last_month_growth = last_month_growth.dropna(subset=['Growth'])
