@@ -13,11 +13,12 @@ st.markdown("""
         html, body, [class*="css"]  {
             margin: 0;
             padding: 0;
-            overflow: hidden;
+            overflow-x: hidden;
         }
         .block-container {
             padding: 1rem 2rem 1rem 2rem;
-            max-width: 100% !important;
+            max-width: 90% !important;
+            margin: auto;
         }
     </style>
 """, unsafe_allow_html=True)
