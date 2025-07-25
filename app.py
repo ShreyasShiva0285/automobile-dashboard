@@ -5,14 +5,11 @@ from datetime import datetime
 from fpdf import FPDF
 import io
 
+# === Cancel Full-Screen Layout ===
 st.markdown("""
     <style>
         .block-container {
-            padding-top: 1rem;
-            padding-bottom: 1rem;
-            padding-left: 2rem;
-            padding-right: 2rem;
-            max-width: 100% !important;
+            padding: 1rem;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -59,7 +56,8 @@ def generate_pdf():
 
     return pdf.output(dest='S').encode('latin-1')
 
-# === Header with Title and Download/Date on same line ===
+
+# === Header: Title and Download Links on Same Row ===
 pdf_bytes = generate_pdf()
 st.markdown(f"""
     <div style='display: flex; justify-content: space-between; align-items: center;'>
@@ -72,6 +70,7 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
+# Trigger PDF download (real button)
 st.download_button(
     label="Download KPI Summary PDF",
     data=pdf_bytes,
@@ -79,12 +78,12 @@ st.download_button(
     mime="application/pdf"
 )
 
-# === KPI Boxes ===
+# === KPIs ===
 st.markdown("### 📊 Key Performance Indicators")
 
 box_style = """
     background-color: #fff;
-    padding: 12px;
+    padding: 16px;
     border: 1.5px solid #cccccc;
     border-radius: 8px;
     text-align: center;
@@ -96,7 +95,6 @@ box_style = """
     justify-content: center;
 """
 
-# Top KPI row
 top_cols = st.columns(3)
 with top_cols[0]:
     st.markdown(f"<div style='{box_style}'><h5>💰 Overall Revenue</h5><h3>£{total_revenue:,.0f}</h3></div>", unsafe_allow_html=True)
@@ -105,7 +103,6 @@ with top_cols[1]:
 with top_cols[2]:
     st.markdown(f"<div style='{box_style}'><h5>📈 3-Month Growth</h5><h3>{growth_rate:.2f}%</h3></div>", unsafe_allow_html=True)
 
-# Bottom KPI row
 bottom_cols = st.columns(3)
 with bottom_cols[0]:
     st.markdown(f"<div style='{box_style}'><h5>🔮 Predicted Revenue ({predicted_month_name})</h5><h3>£{next_month_prediction:,.0f}</h3></div>", unsafe_allow_html=True)
@@ -116,13 +113,12 @@ with bottom_cols[2]:
 
 st.markdown("---")
 
-# === Placeholder for charts ===
+# === Chart Placeholder ===
 st.markdown("### 📈 Sales Charts (unchanged)")
-st.markdown("✅ Your existing bar chart, pie chart, and trends remain untouched.")
-# Example:
+# Example chart (uncomment to activate):
 # fig = px.bar(df, x='PRODUCTLINE', y='SALES', title='Sales by Product Line')
 # st.plotly_chart(fig, use_container_width=True)
 
-# === Data Export ===
+# === Raw Data Export ===
 with st.expander("⬇️ Download Raw Data"):
     st.download_button("Download CSV", data=df.to_csv(index=False), file_name="Auto_Sales_Data.csv", mime="text/csv")
