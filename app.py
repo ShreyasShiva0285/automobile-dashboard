@@ -63,14 +63,15 @@ kpi_row1 = st.columns(3)
 with kpi_row1[0]:
     st.markdown(f"<div style='{box_style}'><h5>💰 Overall Revenue</h5><h3>£{total_revenue:,.0f}</h3></div>", unsafe_allow_html=True)
 with kpi_row1[1]:
-    st.markdown(f"<div style='{box_style}'><h5>📆 Latest Month Revenue</h5><h3>£{latest_month_revenue:,.0f}</h3></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='{box_style}'><h5>📆 Latest Month Revenue ({latest_month.strftime('%B')})</h5><h3>£{latest_month_revenue:,.0f}</h3></div>", unsafe_allow_html=True)
 with kpi_row1[2]:
     st.markdown(f"<div style='{box_style}'><h5>📈 3-Month Growth</h5><h3>{growth_rate:.2f}%</h3></div>", unsafe_allow_html=True)
 
 # Bottom row KPIs
 kpi_row2 = st.columns(3)
 with kpi_row2[0]:
-    st.markdown(f"<div style='{box_style}'><h5>📊 Predicted Next Month</h5><h3>£{next_month_prediction:,.0f}</h3></div>", unsafe_allow_html=True)
+   predicted_month_num = (latest_month.to_timestamp().month % 12) + 1
+st.markdown(f"<div style='{box_style}'><h5>🔮 Predicted Revenue (Month {predicted_month_num})</h5><h3>£{next_month_prediction:,.0f}</h3></div>", unsafe_allow_html=True)
 with kpi_row2[1]:
     st.markdown(f"<div style='{box_style}'><h5>📦 Orders Shipped</h5><h3>{shipped}</h3></div>", unsafe_allow_html=True)
 with kpi_row2[2]:
