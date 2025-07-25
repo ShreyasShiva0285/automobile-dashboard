@@ -5,20 +5,14 @@ from datetime import datetime
 from fpdf import FPDF
 import io
 
-# === Streamlit Fullscreen + No Scroll CSS ===
-st.set_page_config(layout="wide")
-
 st.markdown("""
     <style>
-        html, body, [class*="css"]  {
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-        }
         .block-container {
-            padding: 1rem 2rem 1rem 2rem;
-            max-width: 90% !important;
-            margin: auto;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            padding-left: 2rem;
+            padding-right: 2rem;
+            max-width: 100% !important;
         }
     </style>
 """, unsafe_allow_html=True)
