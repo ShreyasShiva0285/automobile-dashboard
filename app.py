@@ -5,13 +5,18 @@ from datetime import datetime
 from fpdf import FPDF
 import io
 
+# === Streamlit Fullscreen + No Scroll CSS ===
+st.set_page_config(layout="wide")
+
 st.markdown("""
     <style>
+        html, body, [class*="css"]  {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
         .block-container {
-            padding-top: 1rem;
-            padding-bottom: 1rem;
-            padding-left: 2rem;
-            padding-right: 2rem;
+            padding: 1rem 2rem 1rem 2rem;
             max-width: 100% !important;
         }
     </style>
@@ -40,7 +45,8 @@ status_counts = df["STATUS"].value_counts()
 shipped = status_counts.get("Shipped", 0)
 not_shipped = status_counts.sum() - shipped
 
-predicted_month_num = (latest_month.to_timestamp().month % 12) + 1
+predicted_month_name = (latest_month.to_timestamp() + pd.DateOffset(months=1)).strftime('%B')
+
 # === PDF Generator ===
 def generate_pdf():
     pdf = FPDF()
@@ -52,39 +58,38 @@ def generate_pdf():
     pdf.cell(200, 10, txt=f"Overall Revenue: £{total_revenue:,.0f}", ln=True)
     pdf.cell(200, 10, txt=f"Latest Month Revenue ({latest_month.strftime('%B')}): £{latest_month_revenue:,.0f}", ln=True)
     pdf.cell(200, 10, txt=f"3-Month Growth Rate: {growth_rate:.2f}%", ln=True)
-    pdf.cell(200, 10, txt=f"Predicted Revenue (Month {predicted_month_num}): £{next_month_prediction:,.0f}", ln=True)
+    pdf.cell(200, 10, txt=f"Predicted Revenue ({predicted_month_name}): £{next_month_prediction:,.0f}", ln=True)
     pdf.cell(200, 10, txt=f"Orders Shipped: {shipped}", ln=True)
     pdf.cell(200, 10, txt=f"Orders Not Shipped: {not_shipped}", ln=True)
 
     return pdf.output(dest='S').encode('latin-1')
 
-
-# === Header (Left: Title | Right: Share, Download, Date) ===
+# === Header with Title and Download/Date on same line ===
 pdf_bytes = generate_pdf()
-st.markdown("""
+st.markdown(f"""
     <div style='display: flex; justify-content: space-between; align-items: center;'>
         <div style='font-size: 22px; font-weight: 600;'>🏢 Companies Dashboard Pvt.</div>
         <div style='font-size: 16px; text-align: right;'>
             <a href="https://your-streamlit-app-url" target="_blank" title="Share Dashboard" style="text-decoration: none; margin-right: 15px;">🔗</a>
             <a href="#" download="KPI_Summary_Report.pdf" style="text-decoration: none; margin-right: 15px;">📥</a>
-            📅 {date}
+            📅 {datetime.today().strftime('%Y-%m-%d')}
         </div>
     </div>
-""".format(date=datetime.today().strftime('%Y-%m-%d')), unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-# Trigger download button below the link (functional)
 st.download_button(
     label="Download KPI Summary PDF",
     data=pdf_bytes,
     file_name="KPI_Summary_Report.pdf",
     mime="application/pdf"
 )
-# === KPI Section: Fullscreen, balanced ===
+
+# === KPI Boxes ===
 st.markdown("### 📊 Key Performance Indicators")
 
 box_style = """
     background-color: #fff;
-    padding: 16px;
+    padding: 12px;
     border: 1.5px solid #cccccc;
     border-radius: 8px;
     text-align: center;
@@ -96,10 +101,8 @@ box_style = """
     justify-content: center;
 """
 
-predicted_month_name = (latest_month.to_timestamp() + pd.DateOffset(months=1)).strftime('%B')
-
-# Full-width balanced top row
-top_cols = st.columns([1, 1, 1])
+# Top KPI row
+top_cols = st.columns(3)
 with top_cols[0]:
     st.markdown(f"<div style='{box_style}'><h5>💰 Overall Revenue</h5><h3>£{total_revenue:,.0f}</h3></div>", unsafe_allow_html=True)
 with top_cols[1]:
@@ -107,8 +110,8 @@ with top_cols[1]:
 with top_cols[2]:
     st.markdown(f"<div style='{box_style}'><h5>📈 3-Month Growth</h5><h3>{growth_rate:.2f}%</h3></div>", unsafe_allow_html=True)
 
-# Full-width balanced bottom row
-bottom_cols = st.columns([1, 1, 1])
+# Bottom KPI row
+bottom_cols = st.columns(3)
 with bottom_cols[0]:
     st.markdown(f"<div style='{box_style}'><h5>🔮 Predicted Revenue ({predicted_month_name})</h5><h3>£{next_month_prediction:,.0f}</h3></div>", unsafe_allow_html=True)
 with bottom_cols[1]:
@@ -118,7 +121,7 @@ with bottom_cols[2]:
 
 st.markdown("---")
 
-# === Charts Placeholder ===
+# === Placeholder for charts ===
 st.markdown("### 📈 Sales Charts (unchanged)")
 st.markdown("✅ Your existing bar chart, pie chart, and trends remain untouched.")
 # Example:
