@@ -29,7 +29,6 @@ shipped = status_counts.get("Shipped", 0)
 not_shipped = status_counts.sum() - shipped
 
 predicted_month_num = (latest_month.to_timestamp().month % 12) + 1
-
 # === PDF Generator ===
 def generate_pdf():
     pdf = FPDF()
@@ -45,15 +44,8 @@ def generate_pdf():
     pdf.cell(200, 10, txt=f"Orders Shipped: {shipped}", ln=True)
     pdf.cell(200, 10, txt=f"Orders Not Shipped: {not_shipped}", ln=True)
 
-    pdf_stream = io.BytesIO()
-    pdf.output(pdf_stream)
-    pdf_stream.seek(0)
-    return pdf_stream
+    return pdf.output(dest='S').encode('latin-1')
 
-
-
-# === Page Config ===
-st.set_page_config(page_title="Companies Dashboard Pvt.", layout="wide")
 
 # === Header ===
 col1, col2 = st.columns([6, 6])
@@ -66,6 +58,7 @@ with col2:
             <a href="https://your-streamlit-app-url" target="_blank" title="Share Dashboard">🔗</a>
         </div>
     """, unsafe_allow_html=True)
+    
     st.download_button(
         label="📥",
         data=pdf_bytes,
@@ -73,9 +66,11 @@ with col2:
         mime="application/pdf",
         help="Download KPI Summary as PDF"
     )
-    st.markdown(f"<div style='text-align:right; font-size:16px'>📅 {datetime.today().strftime('%Y-%m-%d')}</div>", unsafe_allow_html=True)
-
-st.markdown("---")
+    
+    st.markdown(
+        f"<div style='text-align:right; font-size:16px'>📅 {datetime.today().strftime('%Y-%m-%d')}</div>",
+        unsafe_allow_html=True
+    )
 
 # === KPI Layout ===
 st.markdown("### 📊 Key Performance Indicators")
