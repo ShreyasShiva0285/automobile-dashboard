@@ -5,6 +5,18 @@ from datetime import datetime
 from fpdf import FPDF
 import io
 
+st.markdown("""
+    <style>
+        .block-container {
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            padding-left: 2rem;
+            padding-right: 2rem;
+            max-width: 100% !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # === Load Data ===
 df = pd.read_csv("Auto Sales data.csv", parse_dates=["ORDERDATE"])
 df["ORDERDATE"] = pd.to_datetime(df["ORDERDATE"])
