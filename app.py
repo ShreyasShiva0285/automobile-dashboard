@@ -3,13 +3,12 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 from fpdf import FPDF
-import io
 
-# === Cancel Full-Screen Layout ===
+# ✅ Fixed scrolling (removed restrictive layout CSS)
 st.markdown("""
     <style>
-        .block-container {
-            padding: 1rem;
+        html, body, [class*="css"] {
+            overflow: auto !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -21,7 +20,6 @@ df["EST_PROFIT"] = (df["MSRP"] - df["PRICEEACH"]) * df["QUANTITYORDERED"]
 
 # === KPI Calculations ===
 total_revenue = df["SALES"].sum()
-
 latest_month = df["ORDERDATE"].max().to_period("M")
 latest_month_revenue = df[df["ORDERDATE"].dt.to_period("M") == latest_month]["SALES"].sum()
 
@@ -32,12 +30,11 @@ growth_rate = ((rev_last_3.iloc[-1] - rev_last_3.iloc[0]) / rev_last_3.iloc[0]) 
 
 monthly_rev = df.groupby(df["ORDERDATE"].dt.to_period("M"))["SALES"].sum()
 next_month_prediction = monthly_rev.mean()
+predicted_month_name = (latest_month.to_timestamp() + pd.DateOffset(months=1)).strftime('%B')
 
 status_counts = df["STATUS"].value_counts()
 shipped = status_counts.get("Shipped", 0)
 not_shipped = status_counts.sum() - shipped
-
-predicted_month_name = (latest_month.to_timestamp() + pd.DateOffset(months=1)).strftime('%B')
 
 # === PDF Generator ===
 def generate_pdf():
@@ -56,11 +53,11 @@ def generate_pdf():
 
     return pdf.output(dest='S').encode('latin-1')
 
-
-# === Header: Title and Download Links on Same Row ===
 pdf_bytes = generate_pdf()
+
+# === Header Row ===
 st.markdown(f"""
-    <div style='display: flex; justify-content: space-between; align-items: center;'>
+    <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;'>
         <div style='font-size: 22px; font-weight: 600;'>🏢 Companies Dashboard Pvt.</div>
         <div style='font-size: 16px; text-align: right;'>
             <a href="https://your-streamlit-app-url" target="_blank" title="Share Dashboard" style="text-decoration: none; margin-right: 15px;">🔗</a>
@@ -70,7 +67,7 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Trigger PDF download (real button)
+# === Functional PDF download ===
 st.download_button(
     label="Download KPI Summary PDF",
     data=pdf_bytes,
@@ -78,7 +75,7 @@ st.download_button(
     mime="application/pdf"
 )
 
-# === KPIs ===
+# === KPIs Section ===
 st.markdown("### 📊 Key Performance Indicators")
 
 box_style = """
@@ -95,6 +92,7 @@ box_style = """
     justify-content: center;
 """
 
+# Top KPIs
 top_cols = st.columns(3)
 with top_cols[0]:
     st.markdown(f"<div style='{box_style}'><h5>💰 Overall Revenue</h5><h3>£{total_revenue:,.0f}</h3></div>", unsafe_allow_html=True)
@@ -103,6 +101,7 @@ with top_cols[1]:
 with top_cols[2]:
     st.markdown(f"<div style='{box_style}'><h5>📈 3-Month Growth</h5><h3>{growth_rate:.2f}%</h3></div>", unsafe_allow_html=True)
 
+# Bottom KPIs
 bottom_cols = st.columns(3)
 with bottom_cols[0]:
     st.markdown(f"<div style='{box_style}'><h5>🔮 Predicted Revenue ({predicted_month_name})</h5><h3>£{next_month_prediction:,.0f}</h3></div>", unsafe_allow_html=True)
@@ -113,9 +112,9 @@ with bottom_cols[2]:
 
 st.markdown("---")
 
-# === Chart Placeholder ===
+# === Sales Charts Placeholder ===
 st.markdown("### 📈 Sales Charts (unchanged)")
-# Example chart (uncomment to activate):
+# Example:
 # fig = px.bar(df, x='PRODUCTLINE', y='SALES', title='Sales by Product Line')
 # st.plotly_chart(fig, use_container_width=True)
 
