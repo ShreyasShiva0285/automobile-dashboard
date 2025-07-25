@@ -67,6 +67,7 @@ st.download_button(
     file_name="KPI_Summary_Report.pdf",
     mime="application/pdf"
 )
+# === KPI Section: Fullscreen, balanced ===
 st.markdown("### 📊 Key Performance Indicators")
 
 box_style = """
@@ -77,13 +78,16 @@ box_style = """
     text-align: center;
     box-shadow: 1px 1px 3px rgba(0,0,0,0.05);
     font-size: 14px;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 """
 
-# Get predicted month name (e.g., August)
 predicted_month_name = (latest_month.to_timestamp() + pd.DateOffset(months=1)).strftime('%B')
 
-# === Top Row ===
-top_cols = st.columns(3)
+# Full-width balanced top row
+top_cols = st.columns([1, 1, 1])
 with top_cols[0]:
     st.markdown(f"<div style='{box_style}'><h5>💰 Overall Revenue</h5><h3>£{total_revenue:,.0f}</h3></div>", unsafe_allow_html=True)
 with top_cols[1]:
@@ -91,8 +95,8 @@ with top_cols[1]:
 with top_cols[2]:
     st.markdown(f"<div style='{box_style}'><h5>📈 3-Month Growth</h5><h3>{growth_rate:.2f}%</h3></div>", unsafe_allow_html=True)
 
-# === Bottom Row ===
-bottom_cols = st.columns(3)
+# Full-width balanced bottom row
+bottom_cols = st.columns([1, 1, 1])
 with bottom_cols[0]:
     st.markdown(f"<div style='{box_style}'><h5>🔮 Predicted Revenue ({predicted_month_name})</h5><h3>£{next_month_prediction:,.0f}</h3></div>", unsafe_allow_html=True)
 with bottom_cols[1]:
