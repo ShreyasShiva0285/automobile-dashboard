@@ -24,6 +24,7 @@ growth_rate = ((rev_last_3.iloc[-1] - rev_last_3.iloc[0]) / rev_last_3.iloc[0]) 
 # Predicted next month revenue (simple average)
 monthly_rev = df.groupby(df["ORDERDATE"].dt.to_period("M"))["SALES"].sum()
 next_month_prediction = monthly_rev.mean()
+predicted_month_num = (latest_month.to_timestamp().month % 12) + 1
 
 # Order status
 status_counts = df["STATUS"].value_counts()
@@ -46,20 +47,22 @@ with col2:
 
 st.markdown("---")
 
-# ==== KPI Section (Horizontal Layout in Boxes) ====
+# ==== KPI Section ====
 st.markdown("### 📊 Key Performance Indicators")
 
 box_style = """
     background-color: #fff;
-    padding: 10px;
+    padding: 12px;
     border: 1.5px solid #cccccc;
-    border-radius: 8px;
+    border-radius: 10px;
     text-align: center;
-    box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 1px 1px 4px rgba(0,0,0,0.08);
     font-size: 15px;
+    margin: 10px;
 """
+
 # Top row KPIs
-kpi_row1 = st.columns(3)
+kpi_row1 = st.columns([1, 1, 1])
 with kpi_row1[0]:
     st.markdown(f"<div style='{box_style}'><h5>💰 Overall Revenue</h5><h3>£{total_revenue:,.0f}</h3></div>", unsafe_allow_html=True)
 with kpi_row1[1]:
@@ -68,10 +71,9 @@ with kpi_row1[2]:
     st.markdown(f"<div style='{box_style}'><h5>📈 3-Month Growth</h5><h3>{growth_rate:.2f}%</h3></div>", unsafe_allow_html=True)
 
 # Bottom row KPIs
-kpi_row2 = st.columns(3)
+kpi_row2 = st.columns([1, 1, 1])
 with kpi_row2[0]:
-   predicted_month_num = (latest_month.to_timestamp().month % 12) + 1
-st.markdown(f"<div style='{box_style}'><h5>🔮 Predicted Revenue (Month {predicted_month_num})</h5><h3>£{next_month_prediction:,.0f}</h3></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='{box_style}'><h5>🔮 Predicted Revenue (Month {predicted_month_num})</h5><h3>£{next_month_prediction:,.0f}</h3></div>", unsafe_allow_html=True)
 with kpi_row2[1]:
     st.markdown(f"<div style='{box_style}'><h5>📦 Orders Shipped</h5><h3>{shipped}</h3></div>", unsafe_allow_html=True)
 with kpi_row2[2]:
