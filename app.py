@@ -67,7 +67,6 @@ st.download_button(
     file_name="KPI_Summary_Report.pdf",
     mime="application/pdf"
 )
-# === KPI Layout ===
 st.markdown("### 📊 Key Performance Indicators")
 
 box_style = """
@@ -80,22 +79,24 @@ box_style = """
     font-size: 14px;
 """
 
-kpi_top = st.columns(3)
-with kpi_top[0]:
+# === TOP ROW KPIs ===
+top_spacer1, top_col1, top_spacer2, top_col2, top_spacer3, top_col3, top_spacer4 = st.columns([0.2, 1, 0.2, 1, 0.2, 1, 0.2])
+with top_col1:
     st.markdown(f"<div style='{box_style}'><h5>💰 Overall Revenue</h5><h3>£{total_revenue:,.0f}</h3></div>", unsafe_allow_html=True)
-with kpi_top[1]:
+with top_col2:
     st.markdown(f"<div style='{box_style}'><h5>📆 Latest Month Revenue ({latest_month.strftime('%B')})</h5><h3>£{latest_month_revenue:,.0f}</h3></div>", unsafe_allow_html=True)
-with kpi_top[2]:
+with top_col3:
     st.markdown(f"<div style='{box_style}'><h5>📈 3-Month Growth</h5><h3>{growth_rate:.2f}%</h3></div>", unsafe_allow_html=True)
 
-kpi_bottom = st.columns(3)
-with kpi_bottom[0]:
+# === BOTTOM ROW KPIs ===
+bottom_spacer1, bottom_col1, bottom_spacer2, bottom_col2, bottom_spacer3, bottom_col3, bottom_spacer4 = st.columns([0.2, 1, 0.2, 1, 0.2, 1, 0.2])
+with bottom_col1:
     st.markdown(f"<div style='{box_style}'><h5>🔮 Predicted Revenue (Month {predicted_month_num})</h5><h3>£{next_month_prediction:,.0f}</h3></div>", unsafe_allow_html=True)
-with kpi_bottom[1]:
+with bottom_col2:
     st.markdown(f"<div style='{box_style}'><h5>📦 Orders Shipped</h5><h3>{shipped}</h3></div>", unsafe_allow_html=True)
-with kpi_bottom[2]:
+with bottom_col3:
     st.markdown(f"<div style='{box_style}'><h5>🚚 Orders Not Shipped</h5><h3>{not_shipped}</h3></div>", unsafe_allow_html=True)
-
+    
 st.markdown("---")
 
 # === Charts Placeholder ===
