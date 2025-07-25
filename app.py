@@ -47,31 +47,26 @@ def generate_pdf():
     return pdf.output(dest='S').encode('latin-1')
 
 
-# === Header ===
-col1, col2 = st.columns([6, 6])
-with col1:
-    st.markdown("## 🏢 Companies Dashboard Pvt.")
-with col2:
-    pdf_bytes = generate_pdf()
-    st.markdown(f"""
-        <div style='text-align:right; font-size:18px'>
-            <a href="https://your-streamlit-app-url" target="_blank" title="Share Dashboard">🔗</a>
+# === Header (Left: Title | Right: Share, Download, Date) ===
+pdf_bytes = generate_pdf()
+st.markdown("""
+    <div style='display: flex; justify-content: space-between; align-items: center;'>
+        <div style='font-size: 22px; font-weight: 600;'>🏢 Companies Dashboard Pvt.</div>
+        <div style='font-size: 16px; text-align: right;'>
+            <a href="https://your-streamlit-app-url" target="_blank" title="Share Dashboard" style="text-decoration: none; margin-right: 15px;">🔗</a>
+            <a href="#" download="KPI_Summary_Report.pdf" style="text-decoration: none; margin-right: 15px;">📥</a>
+            📅 {date}
         </div>
-    """, unsafe_allow_html=True)
-    
-    st.download_button(
-        label="📥",
-        data=pdf_bytes,
-        file_name="KPI_Summary_Report.pdf",
-        mime="application/pdf",
-        help="Download KPI Summary as PDF"
-    )
-    
-    st.markdown(
-        f"<div style='text-align:right; font-size:16px'>📅 {datetime.today().strftime('%Y-%m-%d')}</div>",
-        unsafe_allow_html=True
-    )
+    </div>
+""".format(date=datetime.today().strftime('%Y-%m-%d')), unsafe_allow_html=True)
 
+# Trigger download button below the link (functional)
+st.download_button(
+    label="Download KPI Summary PDF",
+    data=pdf_bytes,
+    file_name="KPI_Summary_Report.pdf",
+    mime="application/pdf"
+)
 # === KPI Layout ===
 st.markdown("### 📊 Key Performance Indicators")
 
