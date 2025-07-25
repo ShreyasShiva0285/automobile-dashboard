@@ -36,7 +36,7 @@ def generate_pdf():
     pdf.add_page()
     pdf.set_font("Arial", size=12)
 
-    pdf.cell(200, 10, txt="📊 KPI Summary Report", ln=True, align='C')
+    pdf.cell(200, 10, txt="KPI Summary Report", ln=True, align='C')
     pdf.ln(10)
     pdf.cell(200, 10, txt=f"Overall Revenue: £{total_revenue:,.0f}", ln=True)
     pdf.cell(200, 10, txt=f"Latest Month Revenue ({latest_month.strftime('%B')}): £{latest_month_revenue:,.0f}", ln=True)
@@ -49,6 +49,8 @@ def generate_pdf():
     pdf.output(pdf_stream)
     pdf_stream.seek(0)
     return pdf_stream
+
+
 
 # === Page Config ===
 st.set_page_config(page_title="Companies Dashboard Pvt.", layout="wide")
