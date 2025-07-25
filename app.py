@@ -1,88 +1,55 @@
-# app.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
-# === Load data ===
-df = pd.read_csv("Auto Sales data.csv", parse_dates=['ORDERDATE'])
+# Load data
+df = pd.read_csv("Auto Sales data.csv", parse_dates=["ORDERDATE"])
+df["ORDERDATE"] = pd.to_datetime(df["ORDERDATE"])
+df["EST_PROFIT"] = (df["MSRP"] - df["PRICEEACH"]) * df["QUANTITYORDERED"]
 
-# === Preprocess ===
-df['EST_PROFIT'] = (df['MSRP'] - df['PRICEEACH']) * df['QUANTITYORDERED']
-df['Month'] = df['ORDERDATE'].dt.to_period('M').astype(str)
+# KPI Calculations
+total_revenue = df["SALES"].sum()
+latest_month = df["ORDERDATE"].max().to_period("M")
+latest_month_revenue = df[df["ORDERDATE"].dt.to_period("M") == latest_month]["SALES"].sum()
 
-# === Sidebar Filters ===
-st.sidebar.title("🔍 Filters")
-date_range = st.sidebar.date_input("Select Order Date Range", [df['ORDERDATE'].min(), df['ORDERDATE'].max()])
-productline_filter = st.sidebar.multiselect("Product Line", df['PRODUCTLINE'].unique(), default=df['PRODUCTLINE'].unique())
-deal_filter = st.sidebar.multiselect("Deal Size", df['DEALSIZE'].unique(), default=df['DEALSIZE'].unique())
+df["MONTH"] = df["ORDERDATE"].dt.to_period("M")
+last_3_months = df["MONTH"].sort_values().unique()[-3:]
+rev_last_3 = df[df["MONTH"].isin(last_3_months)].groupby("MONTH")["SALES"].sum()
+growth_rate = ((rev_last_3.iloc[-1] - rev_last_3.iloc[0]) / rev_last_3.iloc[0]) * 100 if len(rev_last_3) == 3 else 0
 
-df_filtered = df[
-    (df['ORDERDATE'] >= pd.to_datetime(date_range[0])) &
-    (df['ORDERDATE'] <= pd.to_datetime(date_range[1])) &
-    (df['PRODUCTLINE'].isin(productline_filter)) &
-    (df['DEALSIZE'].isin(deal_filter))
-]
+monthly_rev = df.groupby(df["ORDERDATE"].dt.to_period("M"))["SALES"].sum()
+next_month_prediction = monthly_rev.mean()
 
-# === KPIs ===
-total_revenue = df_filtered['SALES'].sum()
-order_count = df_filtered['ORDERNUMBER'].nunique()
-avg_order_value = total_revenue / order_count if order_count else 0
-estimated_profit = df_filtered['EST_PROFIT'].sum()
-unique_customers = df_filtered['CUSTOMERNAME'].nunique()
-repeat_customers = df_filtered['CUSTOMERNAME'].value_counts().gt(1).sum()
+status_counts = df["STATUS"].value_counts()
+shipped = status_counts.get("Shipped", 0)
+not_shipped = status_counts.sum() - shipped
+active_deals = df[df["STATUS"] == "In Process"]["CUSTOMERNAME"].nunique()
 
-st.set_page_config(layout="wide")
-st.title("🚗 Automobile Sales Dashboard")
-st.markdown(f"📅 **Today**: `{datetime.now().strftime('%Y-%m-%d %H:%M')}`")
+# Streamlit Layout
+st.set_page_config(page_title="Companies Dashboard Pvt.", layout="wide")
 
-kpi1, kpi2, kpi3 = st.columns(3)
-kpi1.metric("💰 Total Revenue", f"£{total_revenue:,.0f}")
-kpi2.metric("📦 Total Orders", f"{order_count}")
-kpi3.metric("📊 Avg Order Value", f"£{avg_order_value:,.2f}")
+# Header
+col1, col2 = st.columns([6, 6])
+with col1:
+    st.markdown("## 🏢 Companies Dashboard Pvt.")
 
-kpi4, kpi5, kpi6 = st.columns(3)
-kpi4.metric("💹 Estimated Profit", f"£{estimated_profit:,.0f}")
-kpi5.metric("👥 Unique Customers", f"{unique_customers}")
-kpi6.metric("🔁 Repeat Customers", f"{repeat_customers}")
+with col2:
+    st.markdown(f"""
+        <div style='text-align:right; font-size:18px'>
+            🔗 📥 <span style='margin-left:20px;'>📅 {datetime.today().strftime('%Y-%m-%d')}</span>
+        </div>
+    """, unsafe_allow_html=True)
 
-# === Charts ===
+# KPI Section
+col_left, col_right = st.columns([6, 6])
+with col_left:
+    st.metric("💰 Overall Revenue", f"£{total_revenue:,.0f}")
+    st.metric("📆 Latest Month Revenue", f"£{latest_month_revenue:,.0f}")
+    st.metric("📈 Last 3-Month Growth Rate", f"{growth_rate:.2f}%")
+    st.metric("📊 Next Month Predicted Revenue", f"£{next_month_prediction:,.0f}")
 
-st.subheader("📊 Sales by Product Line")
-sales_by_line = df_filtered.groupby("PRODUCTLINE")["SALES"].sum().reset_index()
-fig1 = px.bar(sales_by_line, x="SALES", y="PRODUCTLINE", orientation="h", color="SALES", color_continuous_scale="Blues")
-st.plotly_chart(fig1, use_container_width=True)
-
-st.subheader("📈 Monthly Revenue Trend")
-monthly_rev = df_filtered.groupby("Month")["SALES"].sum().reset_index()
-monthly_rev['Growth'] = monthly_rev['SALES'].diff()
-fig2 = px.bar(
-    monthly_rev, x="Month", y="SALES", color="Growth",
-    color_continuous_scale=["red", "green"], title="Monthly Revenue Trend"
-)
-st.plotly_chart(fig2, use_container_width=True)
-
-st.subheader("🍰 Deal Size Distribution")
-fig3 = px.pie(df_filtered, names='DEALSIZE', hole=0.5, title="Deal Size Share")
-st.plotly_chart(fig3, use_container_width=True)
-
-# === Business Insights ===
-st.subheader("🧠 Business Insights")
-insights = []
-if monthly_rev['Growth'].iloc[-1] < 0:
-    insights.append("⚠️ Revenue declined this month. Investigate underperforming products.")
-else:
-    insights.append("✅ Revenue increased this month. Keep up the momentum!")
-
-if repeat_customers / unique_customers < 0.3:
-    insights.append("⚠️ Low repeat customers. Consider retention strategies.")
-
-if estimated_profit < (0.1 * total_revenue):
-    insights.append("⚠️ Profit margin below 10%. Check pricing and costs.")
-
-for insight in insights:
-    st.markdown(insight)
-
-# === Export Button ===
-st.subheader("⬇️ Download Filtered Data")
-st.download_button("Download CSV", df_filtered.to_csv(index=False), file_name="filtered_auto_sales.csv")
+with col_right:
+    st.metric("📦 Orders Shipped", shipped)
+    st.metric("🚚 Orders Not Shipped", not_shipped)
+    st.metric("🧑‍💼 Active Deal Customers", active_deals)
