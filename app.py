@@ -50,13 +50,14 @@ st.markdown("---")
 st.markdown("### 📊 Key Performance Indicators")
 
 box_style = """
-    background-color: #ffffff;
-    padding: 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
+    background-color: #fff;
+    padding: 10px;
+    border: 1.5px solid #cccccc;
+    border-radius: 8px;
     text-align: center;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+    font-size: 15px;
 """
-
 # Top row KPIs
 kpi_row1 = st.columns(3)
 with kpi_row1[0]:
