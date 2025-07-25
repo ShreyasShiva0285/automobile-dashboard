@@ -8,23 +8,24 @@ df = pd.read_csv("Auto Sales data.csv", parse_dates=["ORDERDATE"])
 df["ORDERDATE"] = pd.to_datetime(df["ORDERDATE"])
 df["EST_PROFIT"] = (df["MSRP"] - df["PRICEEACH"]) * df["QUANTITYORDERED"]
 
-# KPI Calculations
-total_revenue = df["SALES"].sum()
-latest_month = df["ORDERDATE"].max().to_period("M")
-latest_month_revenue = df[df["ORDERDATE"].dt.to_period("M") == latest_month]["SALES"].sum()
+# KPI Section - Horizontal Layout
+st.markdown("### 📊 Key Performance Indicators")
 
-df["MONTH"] = df["ORDERDATE"].dt.to_period("M")
-last_3_months = df["MONTH"].sort_values().unique()[-3:]
-rev_last_3 = df[df["MONTH"].isin(last_3_months)].groupby("MONTH")["SALES"].sum()
-growth_rate = ((rev_last_3.iloc[-1] - rev_last_3.iloc[0]) / rev_last_3.iloc[0]) * 100 if len(rev_last_3) == 3 else 0
+kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
+with kpi_col1:
+    st.metric("💰 Overall Revenue", f"£{total_revenue:,.0f}")
+with kpi_col2:
+    st.metric("📆 Latest Month Revenue", f"£{latest_month_revenue:,.0f}")
+with kpi_col3:
+    st.metric("📈 3-Month Growth", f"{growth_rate:.2f}%")
+with kpi_col4:
+    st.metric("📊 Predicted Next Month", f"£{next_month_prediction:,.0f}")
 
-monthly_rev = df.groupby(df["ORDERDATE"].dt.to_period("M"))["SALES"].sum()
-next_month_prediction = monthly_rev.mean()
-
-status_counts = df["STATUS"].value_counts()
-shipped = status_counts.get("Shipped", 0)
-not_shipped = status_counts.sum() - shipped
-active_deals = df[df["STATUS"] == "In Process"]["CUSTOMERNAME"].nunique()
+status_col1, status_col2 = st.columns(2)
+with status_col1:
+    st.metric("📦 Orders Shipped", shipped)
+with status_col2:
+    st.metric("🚚 Orders Not Shipped", not_shipped)
 
 # Streamlit Layout
 st.set_page_config(page_title="Companies Dashboard Pvt.", layout="wide")
