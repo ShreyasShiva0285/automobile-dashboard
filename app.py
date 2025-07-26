@@ -4,15 +4,33 @@ import plotly.express as px
 from datetime import datetime
 from fpdf import FPDF
 
-# ✅ Fixed scrolling (removed restrictive layout CSS)
+# === Layout Styling ===
 st.markdown("""
     <style>
+        .block-container {
+            padding: 2rem;
+            max-width: 95%;
+            margin: auto;
+        }
+        .kpi-box {
+            background-color: #fff;
+            padding: 16px;
+            margin: 10px;
+            border: 1.5px solid #cccccc;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.05);
+            font-size: 14px;
+            height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
         html, body, [class*="css"] {
             overflow: auto !important;
         }
     </style>
 """, unsafe_allow_html=True)
-
 # === Load Data ===
 df = pd.read_csv("Auto Sales data.csv", parse_dates=["ORDERDATE"])
 df["ORDERDATE"] = pd.to_datetime(df["ORDERDATE"])
