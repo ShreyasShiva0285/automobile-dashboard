@@ -147,7 +147,7 @@ with left_col_2:
 
         top_burns = burn_data.groupby("PURCHASE_CATEGORY")["PURCHASE_EXPENSE"].sum().sort_values(ascending=False).head(3).reset_index()
         top_burns["Total (£)"] = top_burns["PURCHASE_EXPENSE"].apply(lambda x: f"£{x:,.0f}")
-        st.dataframe(top_burns[["PURCHASE_CATEGORY", "Total (£)"].rename(columns={"PURCHASE_CATEGORY": "Category"}), use_container_width=True)
+        st.dataframe(top_burns[["PURCHASE_CATEGORY", "Total (£)"]].rename(columns={"PURCHASE_CATEGORY": "Category"}), use_container_width=True)
 
         fig_burn = px.area(
             burn_data,
