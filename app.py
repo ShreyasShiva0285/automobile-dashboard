@@ -3,12 +3,11 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 from fpdf import FPDF
-import numpy as np
 
 st.markdown("""
     <style>
     .main {
-        max-width: 1250px;
+        max-width: 1150px;
         margin-left: auto;
         margin-right: auto;
         padding: 1rem;
@@ -36,23 +35,18 @@ box_style = """
 df = pd.read_csv("Auto Sales data.csv", parse_dates=["ORDERDATE"])
 df["ORDERDATE"] = pd.to_datetime(df["ORDERDATE"])
 df["EST_PROFIT"] = (df["MSRP"] - df["PRICEEACH"]) * df["QUANTITYORDERED"]
-
-# === Dummy Data for PURCHASE_CATEGORY ===
-purchase_categories = ["Raw Materials", "Utilities", "Logistics", "Packaging", "Software"]
-np.random.seed(42)
-df["PURCHASE_CATEGORY"] = np.random.choice(purchase_categories, size=len(df))
-df["PURCHASE_COST"] = df["SALES"] * np.random.uniform(0.2, 0.6, size=len(df))
+df["MONTH"] = df["ORDERDATE"].dt.to_period("M")
 
 # === KPI Calculations ===
-df["MONTH"] = df["ORDERDATE"].dt.to_period("M")
-latest_month = df["ORDERDATE"].max().to_period("M")
-last_3_months = df["MONTH"].sort_values().unique()[-3:]
-
-monthly_rev = df.groupby("MONTH")["SALES"].sum()
 total_revenue = df["SALES"].sum()
-latest_month_revenue = df[df["MONTH"] == latest_month]["SALES"].sum()
+latest_month = df["ORDERDATE"].max().to_period("M")
+latest_month_revenue = df[df["ORDERDATE"].dt.to_period("M") == latest_month]["SALES"].sum()
+
+last_3_months = df["MONTH"].sort_values().unique()[-3:]
 rev_last_3 = df[df["MONTH"].isin(last_3_months)].groupby("MONTH")["SALES"].sum()
 growth_rate = ((rev_last_3.iloc[-1] - rev_last_3.iloc[0]) / rev_last_3.iloc[0]) * 100 if len(rev_last_3) == 3 else 0
+
+monthly_rev = df.groupby(df["ORDERDATE"].dt.to_period("M"))["SALES"].sum()
 next_month_prediction = monthly_rev.mean()
 predicted_month_name = (latest_month.to_timestamp() + pd.DateOffset(months=1)).strftime('%B')
 
@@ -82,7 +76,9 @@ st.markdown(f"""
     <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;'>
         <div style='font-size: 22px; font-weight: 600;'>🏢 Companies Dashboard Pvt.</div>
         <div style='font-size: 16px; text-align: right;'>
-            <a href="#" download="KPI_Summary_Report.pdf" style="text-decoration: none; margin-right: 15px;">📅 {datetime.today().strftime('%Y-%m-%d')}</a>
+            <a href="#" target="_blank" title="Share Dashboard" style="text-decoration: none; margin-right: 15px;">🔗</a>
+            <a href="#" download="KPI_Summary_Report.pdf" style="text-decoration: none; margin-right: 15px;">📅</a>
+            🗓️ {datetime.today().strftime('%Y-%m-%d')}
         </div>
     </div>
 """, unsafe_allow_html=True)
@@ -109,10 +105,9 @@ with bottom_cols[2]:
 
 st.markdown("---")
 
-# === Layout: Left and Right ===
-left_col, right_col = st.columns([1, 1])
+left_col_1, right_col_1 = st.columns(2)
 
-with left_col:
+with left_col_1:
     st.markdown("#### 🏆 Top 3 Product Lines (Last 3 Months)")
     recent_3_months = df[df["MONTH"].isin(last_3_months)]
     top_3_productlines = recent_3_months.groupby("PRODUCTLINE")["SALES"].sum().sort_values(ascending=False).head(3).reset_index()
@@ -141,40 +136,37 @@ with left_col:
     fig_forecast_pie.update_traces(textinfo='percent+label', hovertemplate='Product Line: %{label}<br>£%{value:,.0f}')
     st.plotly_chart(fig_forecast_pie, use_container_width=True)
 
-    st.markdown("#### 💧 Cash Burn Analysis")
-    recent_purchases = df[df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()]
-    cash_burn = recent_purchases.groupby("PURCHASE_CATEGORY")["PURCHASE_COST"].sum().sort_values(ascending=False).reset_index()
-    cash_burn["Burn (£)"] = cash_burn["PURCHASE_COST"].apply(lambda x: f"£{x:,.0f}")
-    st.dataframe(cash_burn[["PURCHASE_CATEGORY", "Burn (£)"]], use_container_width=True)
+left_col_2, right_col_2 = st.columns(2)
 
-    fig_burn = px.area(
-        recent_purchases.groupby(["MONTH", "PURCHASE_CATEGORY"])["PURCHASE_COST"].sum().reset_index(),
-        x="MONTH",
-        y="PURCHASE_COST",
-        color="PURCHASE_CATEGORY",
-        title="Cash Burn Trend by Category (Last 3 Months)"
-    )
-    fig_burn.update_traces(hovertemplate='%{x}<br>%{color}: £%{y:,.0f}')
-    st.plotly_chart(fig_burn, use_container_width=True)
+with left_col_2:
+    st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
+    if "PURCHASE_CATEGORY" in df.columns:
+        recent_purchases = df[df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()]
+        burn_data = recent_purchases.groupby(["MONTH", "PURCHASE_CATEGORY"])["PURCHASE_EXPENSE"].sum().reset_index()
+        burn_data["MONTH"] = burn_data["MONTH"].astype(str)
 
-with right_col:
-    st.markdown("#### 🧑‍💼 Top 5 Clients (By Sales)")
-    top_clients = df.groupby(["CUSTOMERNAME", "COUNTRY"])["SALES"].sum().sort_values(ascending=False).head(5).reset_index()
-    top_clients["Total Sales (£)"] = top_clients["SALES"].apply(lambda x: f"£{x:,.0f}")
-    st.dataframe(top_clients[["CUSTOMERNAME", "COUNTRY", "Total Sales (£)"]].rename(columns={"CUSTOMERNAME": "Client", "COUNTRY": "Country"}), use_container_width=True)
+        top_burns = burn_data.groupby("PURCHASE_CATEGORY")["PURCHASE_EXPENSE"].sum().sort_values(ascending=False).head(3).reset_index()
+        top_burns["Total (£)"] = top_burns["PURCHASE_EXPENSE"].apply(lambda x: f"£{x:,.0f}")
+        st.dataframe(top_burns[["PURCHASE_CATEGORY", "Total (£)"].rename(columns={"PURCHASE_CATEGORY": "Category"}), use_container_width=True)
 
-    st.markdown("#### 📊 Top 5 Clients: Sales Performance")
-    fig = px.bar(
-        top_clients,
-        x="CUSTOMERNAME",
-        y="SALES",
-        color="COUNTRY",
-        title="Sales Performance of Top 5 Clients"
-    )
-    fig.update_traces(hovertemplate='Client: %{x}<br>Sales: £%{y:,.0f}')
-    st.plotly_chart(fig, use_container_width=True)
+        fig_burn = px.area(
+            burn_data,
+            x="MONTH",
+            y="PURCHASE_EXPENSE",
+            color="PURCHASE_CATEGORY",
+            title="Top Expense Categories Over Last 3 Months",
+            line_group="PURCHASE_CATEGORY"
+        )
+        fig_burn.update_layout(yaxis_title="Expense (£)", xaxis_title="Month")
+        fig_burn.update_traces(hovertemplate='Month: %{x}<br>Category: %{legendgroup}<br>Expense: £%{y:,.0f}')
+        st.plotly_chart(fig_burn, use_container_width=True)
+    else:
+        st.warning("PURCHASE_CATEGORY column not found in data.")
 
-# === Raw Export ===
+with right_col_2:
+    st.markdown("<!-- Reserved for future content -->")
+
+# === Export Option ===
 st.markdown("### 📁 Export Raw Data")
 with st.expander("⬇️ Download Raw Data"):
     st.download_button("Download CSV", data=df.to_csv(index=False), file_name="Auto_Sales_Data.csv", mime="text/csv")
