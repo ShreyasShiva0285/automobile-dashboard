@@ -7,30 +7,21 @@ from fpdf import FPDF
 # === Layout Styling ===
 st.markdown("""
     <style>
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+        }
         .block-container {
-            padding: 2rem;
-            max-width: 95%;
-            margin: auto;
+            padding-top: 1rem;
+            padding-bottom: 2rem;
         }
-        .kpi-box {
-            background-color: #fff;
-            padding: 16px;
-            margin: 10px;
-            border: 1.5px solid #cccccc;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 1px 1px 3px rgba(0,0,0,0.05);
-            font-size: 14px;
-            height: 100px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-        html, body, [class*="css"] {
+        html, body, [class*="css"]  {
             overflow: auto !important;
         }
     </style>
 """, unsafe_allow_html=True)
+
 # === Load Data ===
 df = pd.read_csv("Auto Sales data.csv", parse_dates=["ORDERDATE"])
 df["ORDERDATE"] = pd.to_datetime(df["ORDERDATE"])
