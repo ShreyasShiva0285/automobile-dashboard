@@ -4,6 +4,17 @@ import plotly.express as px
 from datetime import datetime
 from fpdf import FPDF
 
+# === Wider Layout Styling ===
+st.markdown("""
+    <style>
+        .block-container {
+            max-width: 1400px;
+            padding: 2rem 3rem;
+            margin: auto;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # === Layout Styling ===
 box_wrapper = "padding: 8px;"  # Space around each card
 box_style = """
@@ -19,6 +30,7 @@ box_style = """
     flex-direction: column;
     justify-content: center;
 """
+
 # === Load Data ===
 df = pd.read_csv("Auto Sales data.csv", parse_dates=["ORDERDATE"])
 df["ORDERDATE"] = pd.to_datetime(df["ORDERDATE"])
@@ -80,23 +92,8 @@ st.download_button(
     file_name="KPI_Summary_Report.pdf",
     mime="application/pdf"
 )
-st.markdown("### 📊 Key Performance Indicators")
 
-# === Updated Box Style with Margin ===
-box_wrapper = "padding: 8px;"  # Adds space around each KPI card
-box_style = """
-    background-color: #fff;
-    padding: 16px;
-    border: 1.5px solid #cccccc;
-    border-radius: 8px;
-    text-align: center;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.05);
-    font-size: 14px;
-    height: 120px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-"""
+st.markdown("### 📊 Key Performance Indicators")
 
 # === Top 3 KPIs ===
 top_cols = st.columns(3)
