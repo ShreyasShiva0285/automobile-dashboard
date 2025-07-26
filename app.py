@@ -121,39 +121,76 @@ st.markdown("---")
 # === Client Insights Section ===
 st.markdown("### 👥 Top 5 Clients")
 
-# Split screen: Left empty, right contains table and chart
-left_col, right_col = st.columns([1, 2])  # 1/3rd left, 2/3rd right
+# === Two-Column Split Layout: 50-50 Width ===
+left_col, right_col = st.columns([1, 1])
 
-# --- Right Side: Table & Chart ---
+# === LEFT COLUMN: 3 stacked boxes ===
+with left_col:
+    st.markdown("#### 🏆 Top 3 Products (Last 3 Months)")
+    
+    recent_3_months = df[df["MONTH"].isin(last_3_months)]
+    top_3_products = (
+        recent_3_months.groupby("PRODUCTCODE")["SALES"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(3)
+        .reset_index()
+    )
+
+    st.dataframe(top_3_products.rename(columns={"PRODUCTCODE": "Product", "SALES": "Total Sales"}), use_container_width=True)
+
+    st.markdown("#### ❌ Lowest-Selling Product & Clients")
+    
+    lowest_product = (
+        recent_3_months.groupby("PRODUCTCODE")["SALES"]
+        .sum()
+        .sort_values()
+        .head(1)
+        .reset_index()
+    )
+    low_product_code = lowest_product.iloc[0]["PRODUCTCODE"]
+    low_customers = recent_3_months[recent_3_months["PRODUCTCODE"] == low_product_code].groupby("CUSTOMERNAME")["SALES"].sum().reset_index()
+
+    st.write(f"📉 Lowest Product: **{low_product_code}**")
+    st.dataframe(low_customers.rename(columns={"CUSTOMERNAME": "Customer", "SALES": "Sales"}), use_container_width=True)
+
+    st.markdown("#### 🔮 Forecast: Top 3 Products")
+
+    monthly_product_sales = df.groupby([df["ORDERDATE"].dt.to_period("M"), "PRODUCTCODE"])["SALES"].sum().reset_index()
+    monthly_product_sales["MONTH"] = monthly_product_sales["ORDERDATE"].dt.strftime('%b %Y')
+    top_codes = top_3_products["PRODUCTCODE"].tolist()
+    forecast_df = monthly_product_sales[monthly_product_sales["PRODUCTCODE"].isin(top_codes)]
+
+    fig_forecast = px.line(
+        forecast_df,
+        x="MONTH",
+        y="SALES",
+        color="PRODUCTCODE",
+        markers=True,
+        title="Sales Trend of Top 3 Products"
+    )
+    st.plotly_chart(fig_forecast, use_container_width=True)
+
+# === RIGHT COLUMN: Top Clients Table + Performance Chart ===
 with right_col:
-    # Get top 5 clients by sales
+    st.markdown("#### 🧑‍💼 Top 5 Clients (By Sales)")
+
     top_clients = (
         df.groupby(["CUSTOMERNAME", "COUNTRY"])["SALES"]
         .sum()
-        .reset_index()
-        .sort_values(by="SALES", ascending=False)
+        .sort_values(ascending=False)
         .head(5)
+        .reset_index()
+        .rename(columns={"CUSTOMERNAME": "Client", "SALES": "Total Sales", "COUNTRY": "Country"})
     )
-
-    # Rename columns for display and chart usage
-    top_clients.rename(columns={
-        "CUSTOMERNAME": "Customer Name",
-        "SALES": "Sales",
-        "COUNTRY": "Country"
-    }, inplace=True)
-
-    # Show the table
-    st.markdown("#### 📋 Top 5 Clients by Sales")
     st.dataframe(top_clients, use_container_width=True)
 
-    # Bar chart to show client performance
-    st.markdown("#### 📊 Performance of Top Clients")
+    st.markdown("#### 📊 Top 5 Clients: Sales Performance")
     fig = px.bar(
         top_clients,
-        x="Customer Name",
-        y="Sales",
+        x="Client",
+        y="Total Sales",
         color="Country",
-        text_auto='.2s',
         title="Sales Performance of Top 5 Clients"
     )
     st.plotly_chart(fig, use_container_width=True)
