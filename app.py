@@ -8,7 +8,7 @@ from fpdf import FPDF
 st.markdown("""
     <style>
         .block-container {
-            max-width: 1400px;
+            max-width: 1200px;
             padding: 2rem 3rem;
             margin: auto;
         }
