@@ -138,33 +138,44 @@ with left_col:
     fig_forecast_pie.update_traces(textinfo='percent+label', hovertemplate='Product Line: %{label}<br>£%{value:,.0f}')
     st.plotly_chart(fig_forecast_pie, use_container_width=True)
 
-    st.markdown("#### 🔥 Cash Burn Overview (Last 3 Months)")
+# === CASH BURN ANALYSIS SECTION ===
+st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
 
-    # Filter for recent 3 months and purchases
-    recent_purchases = df[df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()]
+# Filter expense data for last 3 months
+recent_expenses = expense_df[expense_df["MONTH"].isin(last_3_months)]
 
-    # Top 3 cash burn areas
-    burn_summary = recent_purchases.groupby("PURCHASE_CATEGORY")["PURCHASE_COST"].sum().sort_values(ascending=False).head(3).reset_index()
-    burn_summary["Total Burn (£)"] = burn_summary["PURCHASE_COST"].apply(lambda x: f"£{x:,.0f}")
-    st.dataframe(burn_summary.rename(columns={"PURCHASE_CATEGORY": "Category"})[["Category", "Total Burn (£)"]], use_container_width=True)
+# Calculate total cash burn
+cash_burn_total = recent_expenses["PURCHASE_COST"].sum()
 
-    # Visual chart (Area chart to show impact over time)
-    burn_trend = recent_purchases.groupby([df["ORDERDATE"].dt.to_period("M"), "PURCHASE_CATEGORY"])["PURCHASE_COST"].sum().reset_index()
-    burn_trend["ORDERDATE"] = burn_trend["ORDERDATE"].astype(str)
+# Find top 3 expense categories
+top_expense_cats = (
+    recent_expenses.groupby("PURCHASE_CATEGORY")["PURCHASE_COST"]
+    .sum()
+    .sort_values(ascending=False)
+    .head(3)
+    .reset_index()
+)
 
-    fig_burn = px.area(
-        burn_trend[burn_trend["PURCHASE_CATEGORY"].isin(burn_summary["PURCHASE_CATEGORY"])],
-        x="ORDERDATE",
-        y="PURCHASE_COST",
-        color="PURCHASE_CATEGORY",
-        line_group="PURCHASE_CATEGORY",
-        title="Top 3 Cash Burn Trends (Last 3 Months)",
-        markers=True
-    )
-    fig_burn.update_layout(yaxis_title="Cost (£)", xaxis_title="Month", legend_title="Category")
-    fig_burn.update_traces(hovertemplate='Month: %{x}<br>Burn: £%{y:,.0f}')
-    st.plotly_chart(fig_burn, use_container_width=True)
+# Show table
+st.markdown("**Top 3 Expense Categories**")
+top_expense_cats["PURCHASE_COST"] = top_expense_cats["PURCHASE_COST"].apply(lambda x: f"£{x:,.0f}")
+st.dataframe(top_expense_cats.rename(columns={"PURCHASE_CATEGORY": "Category", "PURCHASE_COST": "Amount"}), use_container_width=True)
 
+# Line chart for cash burn over the last 3 months
+cash_burn_monthly = recent_expenses.groupby(["MONTH", "PURCHASE_CATEGORY"])["PURCHASE_COST"].sum().reset_index()
+
+fig_cash_burn = px.line(
+    cash_burn_monthly[cash_burn_monthly["PURCHASE_CATEGORY"].isin(top_expense_cats["PURCHASE_CATEGORY"])],
+    x="MONTH",
+    y="PURCHASE_COST",
+    color="PURCHASE_CATEGORY",
+    markers=True,
+    title="Cash Burn Trend (Top 3 Categories)",
+    labels={"PURCHASE_COST": "Amount (£)", "MONTH": "Month"}
+)
+fig_cash_burn.update_traces(mode="lines+markers")
+fig_cash_burn.update_layout(yaxis_tickprefix="£", yaxis_tickformat=",")
+st.plotly_chart(fig_cash_burn, use_container_width=True)
 
 with right_col:
     st.markdown("#### 🧑‍💼 Top 5 Clients (By Sales)")
