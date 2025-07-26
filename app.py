@@ -74,10 +74,10 @@ st.download_button(
     file_name="KPI_Summary_Report.pdf",
     mime="application/pdf"
 )
-
-# === KPIs Section ===
 st.markdown("### 📊 Key Performance Indicators")
 
+# === Updated Box Style with Margin ===
+box_wrapper = "padding: 8px;"  # Adds space around each KPI card
 box_style = """
     background-color: #fff;
     padding: 16px;
@@ -86,29 +86,29 @@ box_style = """
     text-align: center;
     box-shadow: 1px 1px 3px rgba(0,0,0,0.05);
     font-size: 14px;
-    height: 100px;
+    height: 120px;
     display: flex;
     flex-direction: column;
     justify-content: center;
 """
 
-# Top KPIs
+# === Top 3 KPIs ===
 top_cols = st.columns(3)
 with top_cols[0]:
-    st.markdown(f"<div style='{box_style}'><h5>💰 Overall Revenue</h5><h3>£{total_revenue:,.0f}</h3></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>💰 Overall Revenue</h5><h3>£{total_revenue:,.0f}</h3></div></div>", unsafe_allow_html=True)
 with top_cols[1]:
-    st.markdown(f"<div style='{box_style}'><h5>📆 Latest Month Revenue ({latest_month.strftime('%B')})</h5><h3>£{latest_month_revenue:,.0f}</h3></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>📆 Latest Month Revenue ({latest_month.strftime('%B')})</h5><h3>£{latest_month_revenue:,.0f}</h3></div></div>", unsafe_allow_html=True)
 with top_cols[2]:
-    st.markdown(f"<div style='{box_style}'><h5>📈 3-Month Growth</h5><h3>{growth_rate:.2f}%</h3></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>📈 3-Month Growth</h5><h3>{growth_rate:.2f}%</h3></div></div>", unsafe_allow_html=True)
 
-# Bottom KPIs
+# === Bottom 3 KPIs ===
 bottom_cols = st.columns(3)
 with bottom_cols[0]:
-    st.markdown(f"<div style='{box_style}'><h5>🔮 Predicted Revenue ({predicted_month_name})</h5><h3>£{next_month_prediction:,.0f}</h3></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>🔮 Predicted Revenue ({predicted_month_name})</h5><h3>£{next_month_prediction:,.0f}</h3></div></div>", unsafe_allow_html=True)
 with bottom_cols[1]:
-    st.markdown(f"<div style='{box_style}'><h5>📦 Orders Shipped</h5><h3>{shipped}</h3></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>📦 Orders Shipped</h5><h3>{shipped}</h3></div></div>", unsafe_allow_html=True)
 with bottom_cols[2]:
-    st.markdown(f"<div style='{box_style}'><h5>🚚 Orders Not Shipped</h5><h3>{not_shipped}</h3></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>🚚 Orders Not Shipped</h5><h3>{not_shipped}</h3></div></div>", unsafe_allow_html=True)
 
 st.markdown("---")
 
