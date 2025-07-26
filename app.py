@@ -33,7 +33,7 @@ box_style = """
 
 # === Load Data ===
 df = pd.read_csv("Auto Sales data.csv", parse_dates=["ORDERDATE"])
-df.columns = df.columns.str.strip() 
+df.columns = df.columns.str.strip()
 df["ORDERDATE"] = pd.to_datetime(df["ORDERDATE"])
 df["EST_PROFIT"] = (df["MSRP"] - df["PRICEEACH"]) * df["QUANTITYORDERED"]
 df["MONTH"] = df["ORDERDATE"].dt.to_period("M")
@@ -78,7 +78,7 @@ st.markdown(f"""
         <div style='font-size: 22px; font-weight: 600;'>🏢 Companies Dashboard Pvt.</div>
         <div style='font-size: 16px; text-align: right;'>
             <a href="#" target="_blank" title="Share Dashboard" style="text-decoration: none; margin-right: 15px;">🔗</a>
-            <a href="#" download="KPI_Summary_Report.pdf" style="text-decoration: none; margin-right: 15px;">📅</a>
+            <a href="#" download="KPI_Summary_Report.pdf" style="text-decoration: none; margin-right: 15px;">🗕️</a>
             🗓️ {datetime.today().strftime('%Y-%m-%d')}
         </div>
     </div>
@@ -141,7 +141,7 @@ left_col_2, right_col_2 = st.columns(2)
 
 with left_col_2:
     st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
-    if "PURCHASE_CATEGORY" in df.columns:
+    if "PURCHASE_CATEGORY" in df.columns and "PURCHASE_EXPENSE" in df.columns:
         recent_purchases = df[df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()]
         burn_data = recent_purchases.groupby(["MONTH", "PURCHASE_CATEGORY"])["PURCHASE_EXPENSE"].sum().reset_index()
         burn_data["MONTH"] = burn_data["MONTH"].astype(str)
@@ -162,7 +162,7 @@ with left_col_2:
         fig_burn.update_traces(hovertemplate='Month: %{x}<br>Category: %{legendgroup}<br>Expense: £%{y:,.0f}')
         st.plotly_chart(fig_burn, use_container_width=True)
     else:
-        st.warning("PURCHASE_CATEGORY column not found in data.")
+        st.warning("PURCHASE_CATEGORY or PURCHASE_EXPENSE column not found in data.")
 
 with right_col_2:
     st.markdown("<!-- Reserved for future content -->")
