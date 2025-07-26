@@ -5,20 +5,16 @@ from datetime import datetime
 from fpdf import FPDF
 
 # === Layout Styling ===
-box_wrapper = "padding: 8px;"
-box_style = """
-    background-color: #fff;
-    padding: 16px;
-    border: 1.5px solid #cccccc;
-    border-radius: 8px;
-    text-align: center;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.05);
-    font-size: 14px;
-    height: 120px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-"""
+st.markdown("""
+    <style>
+    .main {
+        max-width: 950px;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 1rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # === Load Data ===
 df = pd.read_csv("Auto Sales data.csv", parse_dates=["ORDERDATE"])
