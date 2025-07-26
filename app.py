@@ -123,50 +123,46 @@ left_col, right_col = st.columns([1, 1])
 
 # === LEFT COLUMN: 3 stacked boxes ===
 with left_col:
-    st.markdown("#### 🏆 Top 3 Products (Last 3 Months)")
+    st.markdown("#### 🏆 Top 3 Product Lines (Last 3 Months)")
     
     recent_3_months = df[df["MONTH"].isin(last_3_months)]
-    top_3_products = (
-        recent_3_months.groupby("PRODUCTCODE")["SALES"]
+    top_3_productlines = (
+        recent_3_months.groupby("PRODUCTLINE")["SALES"]
         .sum()
         .sort_values(ascending=False)
         .head(3)
         .reset_index()
     )
+    st.dataframe(top_3_productlines.rename(columns={"PRODUCTLINE": "Product Line", "SALES": "Total Sales"}), use_container_width=True)
 
-    st.dataframe(top_3_products.rename(columns={"PRODUCTCODE": "Product", "SALES": "Total Sales"}), use_container_width=True)
-
-    st.markdown("#### ❌ Lowest-Selling Product & Clients")
+    st.markdown("#### ❌ Lowest-Selling Product Line & Clients")
     
-    lowest_product = (
-        recent_3_months.groupby("PRODUCTCODE")["SALES"]
+    lowest_line = (
+        recent_3_months.groupby("PRODUCTLINE")["SALES"]
         .sum()
         .sort_values()
         .head(1)
         .reset_index()
     )
-    low_product_code = lowest_product.iloc[0]["PRODUCTCODE"]
-    low_customers = recent_3_months[recent_3_months["PRODUCTCODE"] == low_product_code].groupby("CUSTOMERNAME")["SALES"].sum().reset_index()
+    low_product_line = lowest_line.iloc[0]["PRODUCTLINE"]
+    low_customers = recent_3_months[recent_3_months["PRODUCTLINE"] == low_product_line] \
+        .groupby("CUSTOMERNAME")["SALES"].sum().reset_index()
 
-    st.write(f"📉 Lowest Product: **{low_product_code}**")
+    st.write(f"📉 Lowest Product Line: **{low_product_line}**")
     st.dataframe(low_customers.rename(columns={"CUSTOMERNAME": "Customer", "SALES": "Sales"}), use_container_width=True)
 
-    st.markdown("#### 🔮 Forecast: Top 3 Products")
+    st.markdown("#### 🔮 Forecast: Next Month Sales (Top Product Lines)")
 
-    monthly_product_sales = df.groupby([df["ORDERDATE"].dt.to_period("M"), "PRODUCTCODE"])["SALES"].sum().reset_index()
-    monthly_product_sales["MONTH"] = monthly_product_sales["ORDERDATE"].dt.strftime('%b %Y')
-    top_codes = top_3_products["PRODUCTCODE"].tolist()
-    forecast_df = monthly_product_sales[monthly_product_sales["PRODUCTCODE"].isin(top_codes)]
-
-    fig_forecast = px.line(
-        forecast_df,
-        x="MONTH",
-        y="SALES",
-        color="PRODUCTCODE",
-        markers=True,
-        title="Sales Trend of Top 3 Products"
+    forecasted_productline = df[df["PRODUCTLINE"].isin(top_3_productlines["PRODUCTLINE"])]
+    productline_forecast = forecasted_productline.groupby("PRODUCTLINE")["SALES"].mean().reset_index()
+    productline_forecast["Predicted Sales"] = productline_forecast["SALES"]  # for clarity
+    fig_forecast_pie = px.pie(
+        productline_forecast,
+        values="Predicted Sales",
+        names="PRODUCTLINE",
+        title="Next Month Forecast (Top 3 Product Lines)"
     )
-    st.plotly_chart(fig_forecast, use_container_width=True)
+    st.plotly_chart(fig_forecast_pie, use_container_width=True)
 
 # === RIGHT COLUMN: Top Clients Table + Performance Chart ===
 with right_col:
