@@ -7,7 +7,7 @@ from fpdf import FPDF
 st.markdown("""
     <style>
     .main {
-        max-width: 950px;
+        max-width: 1150px;
         margin-left: auto;
         margin-right: auto;
         padding: 1rem;
