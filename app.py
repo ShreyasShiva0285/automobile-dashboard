@@ -3,11 +3,12 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 from fpdf import FPDF
+import numpy as np
 
 st.markdown("""
     <style>
     .main {
-        max-width: 1150px;
+        max-width: 1250px;
         margin-left: auto;
         margin-right: auto;
         padding: 1rem;
@@ -36,17 +37,22 @@ df = pd.read_csv("Auto Sales data.csv", parse_dates=["ORDERDATE"])
 df["ORDERDATE"] = pd.to_datetime(df["ORDERDATE"])
 df["EST_PROFIT"] = (df["MSRP"] - df["PRICEEACH"]) * df["QUANTITYORDERED"]
 
-# === KPI Calculations ===
-total_revenue = df["SALES"].sum()
-latest_month = df["ORDERDATE"].max().to_period("M")
-latest_month_revenue = df[df["ORDERDATE"].dt.to_period("M") == latest_month]["SALES"].sum()
+# === Dummy Data for PURCHASE_CATEGORY ===
+purchase_categories = ["Raw Materials", "Utilities", "Logistics", "Packaging", "Software"]
+np.random.seed(42)
+df["PURCHASE_CATEGORY"] = np.random.choice(purchase_categories, size=len(df))
+df["PURCHASE_COST"] = df["SALES"] * np.random.uniform(0.2, 0.6, size=len(df))
 
+# === KPI Calculations ===
 df["MONTH"] = df["ORDERDATE"].dt.to_period("M")
+latest_month = df["ORDERDATE"].max().to_period("M")
 last_3_months = df["MONTH"].sort_values().unique()[-3:]
+
+monthly_rev = df.groupby("MONTH")["SALES"].sum()
+total_revenue = df["SALES"].sum()
+latest_month_revenue = df[df["MONTH"] == latest_month]["SALES"].sum()
 rev_last_3 = df[df["MONTH"].isin(last_3_months)].groupby("MONTH")["SALES"].sum()
 growth_rate = ((rev_last_3.iloc[-1] - rev_last_3.iloc[0]) / rev_last_3.iloc[0]) * 100 if len(rev_last_3) == 3 else 0
-
-monthly_rev = df.groupby(df["ORDERDATE"].dt.to_period("M"))["SALES"].sum()
 next_month_prediction = monthly_rev.mean()
 predicted_month_name = (latest_month.to_timestamp() + pd.DateOffset(months=1)).strftime('%B')
 
@@ -71,14 +77,12 @@ def generate_pdf():
 
 pdf_bytes = generate_pdf()
 
-# === Header Row ===
+# === Header ===
 st.markdown(f"""
     <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;'>
         <div style='font-size: 22px; font-weight: 600;'>🏢 Companies Dashboard Pvt.</div>
         <div style='font-size: 16px; text-align: right;'>
-            <a href="https://your-streamlit-app-url" target="_blank" title="Share Dashboard" style="text-decoration: none; margin-right: 15px;">🔗</a>
-            <a href="#" download="KPI_Summary_Report.pdf" style="text-decoration: none; margin-right: 15px;">📥</a>
-            📅 {datetime.today().strftime('%Y-%m-%d')}
+            <a href="#" download="KPI_Summary_Report.pdf" style="text-decoration: none; margin-right: 15px;">📅 {datetime.today().strftime('%Y-%m-%d')}</a>
         </div>
     </div>
 """, unsafe_allow_html=True)
@@ -104,9 +108,8 @@ with bottom_cols[2]:
     st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>🚚 Orders Not Shipped</h5><h3>{not_shipped:,}</h3></div></div>", unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("### 👥 Top 5 Clients")
 
-# === Layout Split ===
+# === Layout: Left and Right ===
 left_col, right_col = st.columns([1, 1])
 
 with left_col:
@@ -138,44 +141,21 @@ with left_col:
     fig_forecast_pie.update_traces(textinfo='percent+label', hovertemplate='Product Line: %{label}<br>£%{value:,.0f}')
     st.plotly_chart(fig_forecast_pie, use_container_width=True)
 
-# === CASH BURN ANALYSIS SECTION ===
-st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
+    st.markdown("#### 💧 Cash Burn Analysis")
+    recent_purchases = df[df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()]
+    cash_burn = recent_purchases.groupby("PURCHASE_CATEGORY")["PURCHASE_COST"].sum().sort_values(ascending=False).reset_index()
+    cash_burn["Burn (£)"] = cash_burn["PURCHASE_COST"].apply(lambda x: f"£{x:,.0f}")
+    st.dataframe(cash_burn[["PURCHASE_CATEGORY", "Burn (£)"]], use_container_width=True)
 
-# Filter expense data for last 3 months
-recent_expenses = expense_df[expense_df["MONTH"].isin(last_3_months)]
-
-# Calculate total cash burn
-cash_burn_total = recent_expenses["PURCHASE_COST"].sum()
-
-# Find top 3 expense categories
-top_expense_cats = (
-    recent_expenses.groupby("PURCHASE_CATEGORY")["PURCHASE_COST"]
-    .sum()
-    .sort_values(ascending=False)
-    .head(3)
-    .reset_index()
-)
-
-# Show table
-st.markdown("**Top 3 Expense Categories**")
-top_expense_cats["PURCHASE_COST"] = top_expense_cats["PURCHASE_COST"].apply(lambda x: f"£{x:,.0f}")
-st.dataframe(top_expense_cats.rename(columns={"PURCHASE_CATEGORY": "Category", "PURCHASE_COST": "Amount"}), use_container_width=True)
-
-# Line chart for cash burn over the last 3 months
-cash_burn_monthly = recent_expenses.groupby(["MONTH", "PURCHASE_CATEGORY"])["PURCHASE_COST"].sum().reset_index()
-
-fig_cash_burn = px.line(
-    cash_burn_monthly[cash_burn_monthly["PURCHASE_CATEGORY"].isin(top_expense_cats["PURCHASE_CATEGORY"])],
-    x="MONTH",
-    y="PURCHASE_COST",
-    color="PURCHASE_CATEGORY",
-    markers=True,
-    title="Cash Burn Trend (Top 3 Categories)",
-    labels={"PURCHASE_COST": "Amount (£)", "MONTH": "Month"}
-)
-fig_cash_burn.update_traces(mode="lines+markers")
-fig_cash_burn.update_layout(yaxis_tickprefix="£", yaxis_tickformat=",")
-st.plotly_chart(fig_cash_burn, use_container_width=True)
+    fig_burn = px.area(
+        recent_purchases.groupby(["MONTH", "PURCHASE_CATEGORY"])["PURCHASE_COST"].sum().reset_index(),
+        x="MONTH",
+        y="PURCHASE_COST",
+        color="PURCHASE_CATEGORY",
+        title="Cash Burn Trend by Category (Last 3 Months)"
+    )
+    fig_burn.update_traces(hovertemplate='%{x}<br>%{color}: £%{y:,.0f}')
+    st.plotly_chart(fig_burn, use_container_width=True)
 
 with right_col:
     st.markdown("#### 🧑‍💼 Top 5 Clients (By Sales)")
@@ -194,7 +174,7 @@ with right_col:
     fig.update_traces(hovertemplate='Client: %{x}<br>Sales: £%{y:,.0f}')
     st.plotly_chart(fig, use_container_width=True)
 
-# === Raw Export Option ===
+# === Raw Export ===
 st.markdown("### 📁 Export Raw Data")
 with st.expander("⬇️ Download Raw Data"):
     st.download_button("Download CSV", data=df.to_csv(index=False), file_name="Auto_Sales_Data.csv", mime="text/csv")
