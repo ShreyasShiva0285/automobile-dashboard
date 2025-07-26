@@ -118,6 +118,43 @@ with bottom_cols[2]:
 
 st.markdown("---")
 
+# === Client Insights Section ===
+st.markdown("### 👥 Top 5 Clients")
+
+# Split screen: Left empty, right contains table and chart
+left_col, right_col = st.columns([1, 2])  # 1/3rd left, 2/3rd right
+
+# --- Right Side: Table & Chart ---
+with right_col:
+    # Get top 5 clients by sales
+    top_clients = (
+        df.groupby(["CUSTOMERNAME", "COUNTRY"])["SALES"]
+        .sum()
+        .reset_index()
+        .sort_values(by="SALES", ascending=False)
+        .head(5)
+    )
+
+    # Show the table
+    st.markdown("#### 📋 Top 5 Clients by Sales")
+    st.dataframe(top_clients.rename(columns={
+        "CUSTOMERNAME": "Customer Name",
+        "SALES": "Sales (£)",
+        "COUNTRY": "Country"
+    }), use_container_width=True)
+
+    # Bar chart to show client performance
+    st.markdown("#### 📊 Performance of Top Clients")
+    fig = px.bar(
+        top_clients,
+        x="Customer Name",
+        y="Sales (£)",
+        color="Country",
+        text_auto='.2s',
+        title="Sales Performance of Top 5 Clients"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
 # === Sales Charts Placeholder ===
 st.markdown("### 📈 Sales Charts (unchanged)")
 # Example:
