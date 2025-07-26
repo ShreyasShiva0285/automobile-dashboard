@@ -4,19 +4,8 @@ import plotly.express as px
 from datetime import datetime
 from fpdf import FPDF
 
-# === Wider Layout Styling ===
-st.markdown("""
-    <style>
-        .block-container {
-            max-width: 1200px;
-            padding: 2rem 3rem;
-            margin: auto;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
 # === Layout Styling ===
-box_wrapper = "padding: 8px;"  # Space around each card
+box_wrapper = "padding: 8px;"
 box_style = """
     background-color: #fff;
     padding: 16px;
@@ -59,16 +48,14 @@ def generate_pdf():
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-
     pdf.cell(200, 10, txt="KPI Summary Report", ln=True, align='C')
     pdf.ln(10)
     pdf.cell(200, 10, txt=f"Overall Revenue: £{total_revenue:,.0f}", ln=True)
     pdf.cell(200, 10, txt=f"Latest Month Revenue ({latest_month.strftime('%B')}): £{latest_month_revenue:,.0f}", ln=True)
     pdf.cell(200, 10, txt=f"3-Month Growth Rate: {growth_rate:.2f}%", ln=True)
     pdf.cell(200, 10, txt=f"Predicted Revenue ({predicted_month_name}): £{next_month_prediction:,.0f}", ln=True)
-    pdf.cell(200, 10, txt=f"Orders Shipped: {shipped}", ln=True)
-    pdf.cell(200, 10, txt=f"Orders Not Shipped: {not_shipped}", ln=True)
-
+    pdf.cell(200, 10, txt=f"Orders Shipped: {shipped:,}", ln=True)
+    pdf.cell(200, 10, txt=f"Orders Not Shipped: {not_shipped:,}", ln=True)
     return pdf.output(dest='S').encode('latin-1')
 
 pdf_bytes = generate_pdf()
@@ -85,17 +72,10 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# === Functional PDF download ===
-st.download_button(
-    label="Download KPI Summary PDF",
-    data=pdf_bytes,
-    file_name="KPI_Summary_Report.pdf",
-    mime="application/pdf"
-)
-
+st.download_button("Download KPI Summary PDF", data=pdf_bytes, file_name="KPI_Summary_Report.pdf", mime="application/pdf")
 st.markdown("### 📊 Key Performance Indicators")
 
-# === Top 3 KPIs ===
+# === KPI Cards ===
 top_cols = st.columns(3)
 with top_cols[0]:
     st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>💰 Overall Revenue</h5><h3>£{total_revenue:,.0f}</h3></div></div>", unsafe_allow_html=True)
@@ -104,96 +84,67 @@ with top_cols[1]:
 with top_cols[2]:
     st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>📈 3-Month Growth</h5><h3>{growth_rate:.2f}%</h3></div></div>", unsafe_allow_html=True)
 
-# === Bottom 3 KPIs ===
 bottom_cols = st.columns(3)
 with bottom_cols[0]:
     st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>🔮 Predicted Revenue ({predicted_month_name})</h5><h3>£{next_month_prediction:,.0f}</h3></div></div>", unsafe_allow_html=True)
 with bottom_cols[1]:
-    st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>📦 Orders Shipped</h5><h3>{shipped}</h3></div></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>📦 Orders Shipped</h5><h3>{shipped:,}</h3></div></div>", unsafe_allow_html=True)
 with bottom_cols[2]:
-    st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>🚚 Orders Not Shipped</h5><h3>{not_shipped}</h3></div></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>🚚 Orders Not Shipped</h5><h3>{not_shipped:,}</h3></div></div>", unsafe_allow_html=True)
 
 st.markdown("---")
-
-# === Client Insights Section ===
 st.markdown("### 👥 Top 5 Clients")
 
-# === Two-Column Split Layout: 50-50 Width ===
+# === Layout Split ===
 left_col, right_col = st.columns([1, 1])
 
-# === LEFT COLUMN: 3 stacked boxes ===
 with left_col:
     st.markdown("#### 🏆 Top 3 Product Lines (Last 3 Months)")
-    
     recent_3_months = df[df["MONTH"].isin(last_3_months)]
-    top_3_productlines = (
-        recent_3_months.groupby("PRODUCTLINE")["SALES"]
-        .sum()
-        .sort_values(ascending=False)
-        .head(3)
-        .reset_index()
-    )
-    st.dataframe(top_3_productlines.rename(columns={"PRODUCTLINE": "Product Line", "SALES": "Total Sales"}), use_container_width=True)
+    top_3_productlines = recent_3_months.groupby("PRODUCTLINE")["SALES"].sum().sort_values(ascending=False).head(3).reset_index()
+    top_3_productlines["Total Sales"] = top_3_productlines["SALES"].apply(lambda x: f"£{x:,.0f}")
+    st.dataframe(top_3_productlines[["PRODUCTLINE", "Total Sales"]].rename(columns={"PRODUCTLINE": "Product Line"}), use_container_width=True)
 
     st.markdown("#### ❌ Lowest-Selling Product Line & Clients")
-    
-    lowest_line = (
-        recent_3_months.groupby("PRODUCTLINE")["SALES"]
-        .sum()
-        .sort_values()
-        .head(1)
-        .reset_index()
-    )
+    lowest_line = recent_3_months.groupby("PRODUCTLINE")["SALES"].sum().sort_values().head(1).reset_index()
     low_product_line = lowest_line.iloc[0]["PRODUCTLINE"]
-    low_customers = recent_3_months[recent_3_months["PRODUCTLINE"] == low_product_line] \
-        .groupby("CUSTOMERNAME")["SALES"].sum().reset_index()
-
+    low_customers = recent_3_months[recent_3_months["PRODUCTLINE"] == low_product_line].groupby("CUSTOMERNAME")["SALES"].sum().reset_index()
+    low_customers["Sales (£)"] = low_customers["SALES"].apply(lambda x: f"£{x:,.0f}")
     st.write(f"📉 Lowest Product Line: **{low_product_line}**")
-    st.dataframe(low_customers.rename(columns={"CUSTOMERNAME": "Customer", "SALES": "Sales"}), use_container_width=True)
+    st.dataframe(low_customers[["CUSTOMERNAME", "Sales (£)"]].rename(columns={"CUSTOMERNAME": "Customer"}), use_container_width=True)
 
     st.markdown("#### 🔮 Forecast: Next Month Sales (Top Product Lines)")
-
     forecasted_productline = df[df["PRODUCTLINE"].isin(top_3_productlines["PRODUCTLINE"])]
     productline_forecast = forecasted_productline.groupby("PRODUCTLINE")["SALES"].mean().reset_index()
-    productline_forecast["Predicted Sales"] = productline_forecast["SALES"]  # for clarity
+    productline_forecast["Predicted Sales"] = productline_forecast["SALES"]
     fig_forecast_pie = px.pie(
         productline_forecast,
         values="Predicted Sales",
         names="PRODUCTLINE",
-        title="Next Month Forecast (Top 3 Product Lines)"
+        title="Next Month Forecast (Top 3 Product Lines)",
+        hole=0.3
     )
+    fig_forecast_pie.update_traces(textinfo='percent+label', hovertemplate='Product Line: %{label}<br>£%{value:,.0f}')
     st.plotly_chart(fig_forecast_pie, use_container_width=True)
 
-# === RIGHT COLUMN: Top Clients Table + Performance Chart ===
 with right_col:
     st.markdown("#### 🧑‍💼 Top 5 Clients (By Sales)")
-
-    top_clients = (
-        df.groupby(["CUSTOMERNAME", "COUNTRY"])["SALES"]
-        .sum()
-        .sort_values(ascending=False)
-        .head(5)
-        .reset_index()
-        .rename(columns={"CUSTOMERNAME": "Client", "SALES": "Total Sales", "COUNTRY": "Country"})
-    )
-    st.dataframe(top_clients, use_container_width=True)
+    top_clients = df.groupby(["CUSTOMERNAME", "COUNTRY"])["SALES"].sum().sort_values(ascending=False).head(5).reset_index()
+    top_clients["Total Sales (£)"] = top_clients["SALES"].apply(lambda x: f"£{x:,.0f}")
+    st.dataframe(top_clients[["CUSTOMERNAME", "COUNTRY", "Total Sales (£)"]].rename(columns={"CUSTOMERNAME": "Client", "COUNTRY": "Country"}), use_container_width=True)
 
     st.markdown("#### 📊 Top 5 Clients: Sales Performance")
     fig = px.bar(
         top_clients,
-        x="Client",
-        y="Total Sales",
-        color="Country",
+        x="CUSTOMERNAME",
+        y="SALES",
+        color="COUNTRY",
         title="Sales Performance of Top 5 Clients"
     )
+    fig.update_traces(hovertemplate='Client: %{x}<br>Sales: £%{y:,.0f}')
     st.plotly_chart(fig, use_container_width=True)
 
-# === Sales Charts Placeholder ===
-st.markdown("### 📈 Sales Charts (unchanged)")
-# Example:
-# fig = px.bar(df, x='PRODUCTLINE', y='SALES', title='Sales by Product Line')
-# st.plotly_chart(fig, use_container_width=True)
-
-# === Raw Data Export ===
+# === Raw Export Option ===
+st.markdown("### 📁 Export Raw Data")
 with st.expander("⬇️ Download Raw Data"):
     st.download_button("Download CSV", data=df.to_csv(index=False), file_name="Auto_Sales_Data.csv", mime="text/csv")
