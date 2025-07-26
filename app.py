@@ -135,20 +135,23 @@ with right_col:
         .head(5)
     )
 
+    # Rename columns for display and chart usage
+    top_clients.rename(columns={
+        "CUSTOMERNAME": "Customer Name",
+        "SALES": "Sales",
+        "COUNTRY": "Country"
+    }, inplace=True)
+
     # Show the table
     st.markdown("#### 📋 Top 5 Clients by Sales")
-    st.dataframe(top_clients.rename(columns={
-        "CUSTOMERNAME": "Customer Name",
-        "SALES": "Sales (£)",
-        "COUNTRY": "Country"
-    }), use_container_width=True)
+    st.dataframe(top_clients, use_container_width=True)
 
     # Bar chart to show client performance
     st.markdown("#### 📊 Performance of Top Clients")
     fig = px.bar(
         top_clients,
         x="Customer Name",
-        y="Sales (£)",
+        y="Sales",
         color="Country",
         text_auto='.2s',
         title="Sales Performance of Top 5 Clients"
