@@ -33,6 +33,7 @@ box_style = """
 
 # === Load Data ===
 df = pd.read_csv("Auto Sales data.csv", parse_dates=["ORDERDATE"])
+df.columns = df.columns.str.strip() 
 df["ORDERDATE"] = pd.to_datetime(df["ORDERDATE"])
 df["EST_PROFIT"] = (df["MSRP"] - df["PRICEEACH"]) * df["QUANTITYORDERED"]
 df["MONTH"] = df["ORDERDATE"].dt.to_period("M")
