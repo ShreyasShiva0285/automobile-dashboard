@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -149,8 +148,6 @@ left_col_1, right_col_1 = st.columns(2)
 
 with left_col_1:
     st.markdown("#### 💵 Gross & Net Profit Analysis (Last 3 Months)")
-    ...
-
 
     profit_df = df[df["MONTH"].isin(last_3_months)].copy()
     profit_df["GROSS_PROFIT"] = (profit_df["MSRP"] - profit_df["PRICEEACH"]) * profit_df["QUANTITYORDERED"]
@@ -171,30 +168,27 @@ with left_col_1:
     st.markdown(f"### 🧾 Total Net Profit (Last 3 Months): **£{total_net_profit:,.0f}**")
 
     # Waterfall Chart for Net Profit over 3 months
+    x_vals = monthly_profit["MONTH"].astype(str).tolist()
+    y_vals = monthly_profit["NET_PROFIT"].tolist()
 
-# Prepare values for Waterfall chart
-x_vals = monthly_profit["MONTH"].astype(str).tolist()
-y_vals = monthly_profit["NET_PROFIT"].tolist()
+    waterfall_fig = go.Figure(go.Waterfall(
+        name="Net Profit",
+        orientation="v",
+        x=x_vals,
+        y=y_vals,
+        text=[f"£{val:,.0f}" for val in y_vals],
+        textposition="outside",
+        connector={"line": {"color": "gray"}},
+    ))
 
-# Create Waterfall chart using go
-waterfall_fig = go.Figure(go.Waterfall(
-    name="Net Profit",
-    orientation="v",
-    x=x_vals,
-    y=y_vals,
-    text=[f"£{val:,.0f}" for val in y_vals],
-    textposition="outside",
-    connector={"line": {"color": "gray"}},
-))
+    waterfall_fig.update_layout(
+        title="📉 Net Profit Walk (Last 3 Months)",
+        yaxis_title="Net Profit (£)",
+        waterfallgap=0.3,
+        margin=dict(t=50, b=30)
+    )
 
-waterfall_fig.update_layout(
-    title="📉 Net Profit Walk (Last 3 Months)",
-    yaxis_title="Net Profit (£)",
-    waterfallgap=0.3,
-    margin=dict(t=50, b=30)
-)
-
-st.plotly_chart(waterfall_fig, use_container_width=True)
+    st.plotly_chart(waterfall_fig, use_container_width=True)
 
 # 🔍 Insights Section
 st.markdown("### 🔍 Insights on Net Profit Walk")
@@ -205,7 +199,9 @@ insights = [
 ]
 for point in insights:
     st.markdown(f"- {point}")
+
 insight_col1, insight_col2 = st.columns(2)
+recent_3_months = df[df["MONTH"].isin(last_3_months)].copy()
 
 with insight_col1:
     st.markdown("#### ❌ Lowest-Selling Product Line & Clients")
@@ -218,6 +214,7 @@ with insight_col1:
 
 with insight_col2:
     st.markdown("#### 🔮 Forecast: Next Month Sales (Top Product Lines)")
+    top_3_productlines = df.groupby("PRODUCTLINE")["SALES"].sum().sort_values(ascending=False).head(3).reset_index()
     forecasted_productline = df[df["PRODUCTLINE"].isin(top_3_productlines["PRODUCTLINE"])]
     productline_forecast = forecasted_productline.groupby("PRODUCTLINE")["SALES"].mean().reset_index()
     productline_forecast["Predicted Sales"] = productline_forecast["SALES"]
@@ -230,7 +227,6 @@ with insight_col2:
     )
     fig_forecast_pie.update_traces(textinfo='percent+label', hovertemplate='Product Line: %{label}<br>£%{value:,.0f}')
     st.plotly_chart(fig_forecast_pie, use_container_width=True)
-
 
 left_col_2, right_col_2 = st.columns(2)
 
@@ -314,4 +310,4 @@ with left_col_2:
 # === Export Option ===
 st.markdown("### 📁 Export Raw Data")
 with st.expander("⬇️ Download Raw Data"):
-    st.download_button("Download CSV", data=df.to_csv(index=False), file_name="Auto_Sales_Data.csv", mime="text/csv")
+    st.download_button("Download CSV", data=df.to_csv(index=False), file_name="Auto_Sales_Data.csv", mime="text/c
