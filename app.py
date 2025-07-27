@@ -142,9 +142,14 @@ with bottom_cols[2]:
         </div>
     </div>
     """, unsafe_allow_html=True)
-   
+
+# ✅ FIX: Define columns before using
+left_col_1, right_col_1 = st.columns(2)
+
 with left_col_1:
     st.markdown("#### 💵 Gross & Net Profit Analysis (Last 3 Months)")
+    ...
+
 
     profit_df = df[df["MONTH"].isin(last_3_months)].copy()
     profit_df["GROSS_PROFIT"] = (profit_df["MSRP"] - profit_df["PRICEEACH"]) * profit_df["QUANTITYORDERED"]
