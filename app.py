@@ -165,14 +165,17 @@ with left_col_1:
         use_container_width=True
     )
 
-   # Prepare data
+# Prepare data
 profit_summary = recent_3_months.groupby("MONTH")[["Net Profit"]].sum().reset_index()
 
-# Create waterfall chart using go.Figure
+# ✅ Convert Timestamp to string to avoid JSON serialization issues
+profit_summary["MonthStr"] = profit_summary["MONTH"].dt.strftime("%B %Y")
+
+# Create waterfall chart
 waterfall_fig = go.Figure(go.Waterfall(
     name="Net Profit",
     orientation="v",
-    x=profit_summary["MONTH"],
+    x=profit_summary["MonthStr"],
     y=profit_summary["Net Profit"],
     connector={"line": {"color": "rgb(63, 63, 63)"}}
 ))
@@ -184,7 +187,7 @@ waterfall_fig.update_layout(
     showlegend=False
 )
 
-# Display the chart
+# Plot it
 st.plotly_chart(waterfall_fig, use_container_width=True)
 
 # ===== RIGHT SIDE =====
