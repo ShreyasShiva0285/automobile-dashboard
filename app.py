@@ -146,10 +146,41 @@ with bottom_cols[2]:
 # ✅ FIX: Define columns before using
 left_col_1, right_col_1 = st.columns(2)
 
+# ===== LEFT SIDE =====
 with left_col_1:
     st.markdown("#### 💵 Gross & Net Profit Analysis (Last 3 Months)")
-    # [Original Left-Side Profit Code Continues...]
 
+    recent_3_months = df[df["MONTH"].isin(last_3_months)].copy()
+    recent_3_months["Gross Profit"] = recent_3_months["SALES"] - recent_3_months["RAW_MATERIAL_COST"]
+    recent_3_months["Net Profit"] = recent_3_months["Gross Profit"] - recent_3_months["OPERATING_EXPENSES"]
+
+    profit_summary = recent_3_months.groupby("MONTH")[["Gross Profit", "Net Profit"]].sum().reset_index()
+
+    st.dataframe(
+        profit_summary.rename(columns={
+            "MONTH": "Month",
+            "Gross Profit": "Gross Profit (£)",
+            "Net Profit": "Net Profit (£)"
+        }),
+        use_container_width=True
+    )
+
+    # Waterfall / Net Profit Walk Chart
+    st.markdown("#### 📉 Total Net Profit (Last 3 Months)")
+    total_net = profit_summary["Net Profit"].sum()
+    st.markdown(f"### 💼 Total Net Profit (Last 3 Months): £{total_net:,.0f}")
+
+    waterfall_fig = px.waterfall(
+        profit_summary,
+        x="MONTH",
+        y="Net Profit",
+        title="Net Profit Walk (Last 3 Months)",
+        labels={"Net Profit": "Profit (£)", "MONTH": "Month"},
+    )
+    waterfall_fig.update_layout(showlegend=False)
+    st.plotly_chart(waterfall_fig, use_container_width=True)
+
+# ===== RIGHT SIDE =====
 with right_col_1:
     st.markdown("#### 📦 Inventory & Fulfillment Summary")
 
@@ -168,6 +199,7 @@ with right_col_1:
     forecast_df = df[df["MONTH"].isin(last_3_months)]
     forecast_summary = forecast_df.groupby("PRODUCTLINE")["QUANTITYORDERED"].mean().reset_index()
     forecast_summary["Predicted Orders"] = forecast_summary["QUANTITYORDERED"].apply(lambda x: int(x))
+
     fig_inventory = px.bar(
         forecast_summary.sort_values("Predicted Orders", ascending=False).head(5),
         x="PRODUCTLINE",
@@ -178,7 +210,6 @@ with right_col_1:
     fig_inventory.update_traces(texttemplate='%{text}', hovertemplate='Product Line: %{x}<br>Orders: %{y}')
     fig_inventory.update_layout(xaxis_title="Product Line", yaxis_title="Forecasted Orders")
     st.plotly_chart(fig_inventory, use_container_width=True)
-
 
 # 🔍 Insights Section
 st.markdown("### 🔍 Insights on Net Profit Walk")
