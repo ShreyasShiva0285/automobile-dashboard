@@ -149,10 +149,12 @@ left_col_1, right_col_1 = st.columns(2)
 
 with left_col_1:
     st.markdown("#### 💵 Gross & Net Profit Analysis (Last 3 Months)")
-    # Your existing gross/net profit data and table code here...
+    # Your existing gross/net profit table code here...
 
-    # ✅ Net Profit Walk chart directly below
+    # ✅ Net Profit Walk chart just below
     st.markdown("#### 📉 Net Profit Walk (Last 3 Months)")
+
+    recent_3_months = df[df["MONTH"].isin(last_3_months)].copy()
 
     profit_summary = recent_3_months.groupby("MONTH")[["Net Profit"]].sum().reset_index()
     profit_summary["MonthStr"] = profit_summary["MONTH"].dt.strftime("%B %Y")
@@ -175,6 +177,7 @@ with left_col_1:
     )
 
     st.plotly_chart(waterfall_fig, use_container_width=True)
+
 
 with right_col_1:
     st.markdown("#### 📦 Inventory & Fulfillment Summary")
