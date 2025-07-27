@@ -157,7 +157,13 @@ with left_col_1:
     recent_3_months = df[df["MONTH"].isin(last_3_months)].copy()
 
     # ✅ Calculate Net Profit first
-    recent_3_months["Net Profit"] = recent_3_months["SALES"] - recent_3_months["TOTAL_COST"]
+    # ✅ Calculate Net Profit using available cost column
+cost_column = "TOTAL_COST" if "TOTAL_COST" in recent_3_months.columns else "COST" if "COST" in recent_3_months.columns else None
+if cost_column:
+    recent_3_months["Net Profit"] = recent_3_months["SALES"] - recent_3_months[cost_column]
+else:
+    st.warning("⚠️ Unable to calculate Net Profit: No cost column ('TOTAL_COST' or 'COST') found.")
+    recent_3_months["Net Profit"] = 0
 
     profit_summary = recent_3_months.groupby("MONTH")[["Net Profit"]].sum().reset_index()
     profit_summary["MonthStr"] = profit_summary["MONTH"].dt.strftime("%B %Y")
