@@ -140,25 +140,36 @@ with left_col_1:
 left_col_2, right_col_2 = st.columns(2)
 
 with left_col_2:
-    st.markdown("#### 💸 Cash Burn Analysis & Purchase Expenses (Last 3 Months)")
+    st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
+    if "PURCHASE_CATEGORY" in df.columns and "OPERATING_EXPENSES" in df.columns:
+        recent_purchases = df[df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()]
+        
+        # Rename for clarity (we’ll use OPERATING_EXPENSES as cash burn)
+        recent_purchases = recent_purchases.rename(columns={"OPERATING_EXPENSES": "CASH_BURN"})
 
-    if "PURCHASE_CATEGORY" in df.columns:
-        # Filter last 3 months
-        recent_data = df[df["MONTH"].isin(last_3_months)].copy()
+        # Total by category
+        top_3_categories = (
+            recent_purchases.groupby("PURCHASE_CATEGORY")["CASH_BURN"]
+            .sum()
+            .sort_values(ascending=False)
+            .head(3)
+            .reset_index()
+        )
+        top_3_categories["Total (£)"] = top_3_categories["CASH_BURN"].apply(lambda x: f"£{x:,.0f}")
+        st.dataframe(
+            top_3_categories[["PURCHASE_CATEGORY", "Total (£)"]].rename(columns={"PURCHASE_CATEGORY": "Category"}),
+            use_container_width=True
+        )
 
-        # 🔹 1. Total Cash Burn
-        recent_data["CASH_BURN"] = recent_data["RAW_MATERIAL_COST"] + recent_data["OPERATING_EXPENSES"]
-        total_burn = recent_data["CASH_BURN"].sum()
-        st.metric("🔥 Total Cash Burn (Last 3 Months)", f"£{total_burn:,.0f}")
+        # Monthly trend
+        burn_trend = (
+            recent_purchases.groupby(["MONTH", "PURCHASE_CATEGORY"])["CASH_BURN"]
+            .sum()
+            .reset_index()
+        )
+        burn_trend["MONTH"] = burn_trend["MONTH"].astype(str)
 
-        # 🔹 2. Purchase Expense by Category
-        category_expense = recent_data.groupby("PURCHASE_CATEGORY")["CASH_BURN"].sum().sort_values(ascending=False).reset_index()
-        top_3_categories = category_expense.head(3)
-        top_3_categories["Expense (£)"] = top_3_categories["CASH_BURN"].apply(lambda x: f"£{x:,.0f}")
-        st.markdown("##### 🧾 Top 3 Expense Categories")
-        st.dataframe(top_3_categories[["PURCHASE_CATEGORY", "Expense (£)"]].rename(columns={"PURCHASE_CATEGORY": "Category"}), use_container_width=True)
-
-                # 🔹 3. Grouped Bar Chart of Monthly Cash Burn by Category
+        # Bar chart (grouped by category)
         fig = px.bar(
             burn_trend[burn_trend["PURCHASE_CATEGORY"].isin(top_3_categories["PURCHASE_CATEGORY"])],
             x="MONTH",
@@ -170,11 +181,15 @@ with left_col_2:
             text_auto=".2s"
         )
         fig.update_layout(yaxis_title="Expense (£)", xaxis_title="Month")
-        fig.update_traces(texttemplate='£%{y:,.0f}', hovertemplate='Month: %{x}<br>Category: %{legendgroup}<br>Expense: £%{y:,.0f}')
+        fig.update_traces(
+            texttemplate='£%{y:,.0f}',
+            hovertemplate='Month: %{x}<br>Category: %{legendgroup}<br>Expense: £%{y:,.0f}'
+        )
         st.plotly_chart(fig, use_container_width=True)
 
     else:
-        st.warning("PURCHASE_CATEGORY column not found in data.")
+        st.warning("PURCHASE_CATEGORY or OPERATING_EXPENSES column not found in data.")
+
 
 with right_col_2:
     st.markdown("<!-- Reserved for future content -->")
