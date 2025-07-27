@@ -138,6 +138,51 @@ with left_col_1:
     st.plotly_chart(fig_forecast_pie, use_container_width=True)
 
 left_col_2, right_col_2 = st.columns(2)
+with right_col_2:
+    st.markdown("#### 💵 Gross & Net Profit Analysis (Last 3 Months)")
+
+    # Filter data for last 3 months
+    profit_df = df[df["MONTH"].isin(last_3_months)].copy()
+
+    # Calculate Gross Profit: MSRP - PRICEEACH for all units sold
+    profit_df["GROSS_PROFIT"] = (profit_df["MSRP"] - profit_df["PRICEEACH"]) * profit_df["QUANTITYORDERED"]
+
+    # Calculate Net Profit: Sales - Raw Material Cost - Operating Expenses
+    profit_df["NET_PROFIT"] = profit_df["SALES"] - profit_df["RAW_MATERIAL_COST"] - profit_df["OPERATING_EXPENSES"]
+
+    # Group by Month
+    monthly_profit = profit_df.groupby("MONTH").agg({
+        "GROSS_PROFIT": "sum",
+        "NET_PROFIT": "sum"
+    }).reset_index()
+
+    # Format for display
+    monthly_profit["MONTH"] = monthly_profit["MONTH"].astype(str)
+    monthly_profit["Gross Profit (£)"] = monthly_profit["GROSS_PROFIT"].apply(lambda x: f"£{x:,.0f}")
+    monthly_profit["Net Profit (£)"] = monthly_profit["NET_PROFIT"].apply(lambda x: f"£{x:,.0f}")
+    display_profit = monthly_profit[["MONTH", "Gross Profit (£)", "Net Profit (£)"]].rename(columns={"MONTH": "Month"})
+
+    # Show table
+    st.dataframe(display_profit, use_container_width=True)
+
+    # Total net profit over 3 months
+    total_net_profit = monthly_profit["NET_PROFIT"].sum()
+    st.markdown(f"### 🧾 Total Net Profit (Last 3 Months): **£{total_net_profit:,.0f}**")
+
+    # Donut Chart for Net Profit by Month
+    fig_donut = px.pie(
+        monthly_profit,
+        values="NET_PROFIT",
+        names="MONTH",
+        title="Net Profit Distribution (Last 3 Months)",
+        hole=0.4
+    )
+    fig_donut.update_traces(
+        textinfo='percent+label',
+        hovertemplate='Month: %{label}<br>Net Profit: £%{value:,.0f}'
+    )
+    st.plotly_chart(fig_donut, use_container_width=True)
+
 
 with left_col_2:
     st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
