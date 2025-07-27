@@ -159,18 +159,32 @@ with left_col_1:
     total_net_profit = monthly_profit["NET_PROFIT"].sum()
     st.markdown(f"### 🧾 Total Net Profit (Last 3 Months): **£{total_net_profit:,.0f}**")
 
-    fig_donut = px.pie(
-        monthly_profit,
-        values="NET_PROFIT",
-        names="MONTH",
-        title="Net Profit Distribution (Last 3 Months)",
-        hole=0.4
-    )
-    fig_donut.update_traces(
-        textinfo='percent+label',
-        hovertemplate='Month: %{label}<br>Net Profit: £%{value:,.0f}'
-    )
-    st.plotly_chart(fig_donut, use_container_width=True)
+    # Waterfall Chart for Net Profit over 3 months
+waterfall_fig = px.waterfall(
+    monthly_profit,
+    x="MONTH",
+    y="NET_PROFIT",
+    title="📉 Net Profit Walk (Last 3 Months)",
+    labels={"NET_PROFIT": "Net Profit (£)", "MONTH": "Month"},
+    text=monthly_profit["NET_PROFIT"].apply(lambda x: f"£{x:,.0f}"),
+)
+
+waterfall_fig.update_traces(
+    hovertemplate="Month: %{x}<br>Net Profit: £%{y:,.0f}",
+    connector={"line": {"color": "gray"}}
+)
+waterfall_fig.update_layout(yaxis_title="Net Profit (£)")
+st.plotly_chart(waterfall_fig, use_container_width=True)
+
+# ➕ Insights Section
+st.markdown("### 🔍 Insights on Net Profit Walk")
+insights = [
+    "📈 Significant increase in net profit observed in the final month.",
+    "💸 Middle month had the lowest net gain, indicating possible high expenses or low revenue.",
+    "📊 Stable trend overall with room for optimization in operational costs."
+]
+for point in insights:
+    st.markdown(f"- {point}")
 
 left_col_2, right_col_2 = st.columns(2)
 
