@@ -310,4 +310,4 @@ with left_col_2:
 # === Export Option ===
 st.markdown("### 📁 Export Raw Data")
 with st.expander("⬇️ Download Raw Data"):
-    st.download_button("Download CSV", data=df.to_csv(index=False), file_name="Auto_Sales_Data.csv", mime="text/c
+   st.download_button("Download CSV", data=df.to_csv(index=False), file_name="Auto_Sales_Data.csv", mime="text/csv")
