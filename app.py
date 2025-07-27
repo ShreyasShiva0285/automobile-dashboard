@@ -147,45 +147,39 @@ with bottom_cols[2]:
 # === Left & Right Columns for Profit Analysis and Inventory ===
 left_col_1, right_col_1 = st.columns(2)
 
+# Left and Right Columns for Profit and Inventory
+left_col_1, right_col_1 = st.columns(2)
+
 with left_col_1:
     st.markdown("#### 💵 Gross & Net Profit Analysis (Last 3 Months)")
-    # (Your existing profit table/code here...)
+    # Your existing left-side profit summary chart or table here...
 
-    # 📉 Add Net Profit Walk below
+    # Add Net Profit Waterfall Graph BELOW in left column
     st.markdown("#### 📉 Net Profit Walk (Last 3 Months)")
 
-    recent_3_months = df[df["MONTH"].isin(last_3_months)].copy()
+    # Prepare values for Waterfall chart
+    x_vals = monthly_profit["MONTH"].astype(str).tolist()
+    y_vals = monthly_profit["NET_PROFIT"].tolist()
 
-    # ✅ Calculate Net Profit first
-    # ✅ Calculate Net Profit using available cost column
-cost_column = "TOTAL_COST" if "TOTAL_COST" in recent_3_months.columns else "COST" if "COST" in recent_3_months.columns else None
-if cost_column:
-    recent_3_months["Net Profit"] = recent_3_months["SALES"] - recent_3_months[cost_column]
-else:
-    st.warning("⚠️ Unable to calculate Net Profit: No cost column ('TOTAL_COST' or 'COST') found.")
-    recent_3_months["Net Profit"] = 0
-
-    profit_summary = recent_3_months.groupby("MONTH")[["Net Profit"]].sum().reset_index()
-    profit_summary["MonthStr"] = profit_summary["MONTH"].dt.strftime("%B %Y")
-
+    # Create Waterfall chart using go
     waterfall_fig = go.Figure(go.Waterfall(
         name="Net Profit",
         orientation="v",
-        x=profit_summary["MonthStr"],
-        y=profit_summary["Net Profit"],
-        connector={"line": {"color": "rgb(63, 63, 63)"}},
-        increasing={"marker":{"color":"green"}},
-        decreasing={"marker":{"color":"red"}},
+        x=x_vals,
+        y=y_vals,
+        text=[f"£{val:,.0f}" for val in y_vals],
+        textposition="outside",
+        connector={"line": {"color": "gray"}},
     ))
 
     waterfall_fig.update_layout(
-        title="Net Profit Walk (Last 3 Months)",
-        xaxis_title="Month",
         yaxis_title="Net Profit (£)",
-        showlegend=False
+        waterfallgap=0.3,
+        margin=dict(t=50, b=30)
     )
 
     st.plotly_chart(waterfall_fig, use_container_width=True)
+
 with right_col_1:
     st.markdown("#### 📦 Inventory & Fulfillment Summary")
 
