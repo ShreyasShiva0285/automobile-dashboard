@@ -148,47 +148,37 @@ left_col_1, right_col_1 = st.columns(2)
 
 with left_col_1:
     st.markdown("#### 💵 Gross & Net Profit Analysis (Last 3 Months)")
+    # [Original Left-Side Profit Code Continues...]
 
-    profit_df = df[df["MONTH"].isin(last_3_months)].copy()
-    profit_df["GROSS_PROFIT"] = (profit_df["MSRP"] - profit_df["PRICEEACH"]) * profit_df["QUANTITYORDERED"]
-    profit_df["NET_PROFIT"] = profit_df["SALES"] - profit_df["RAW_MATERIAL_COST"] - profit_df["OPERATING_EXPENSES"]
+with right_col_1:
+    st.markdown("#### 📦 Inventory & Fulfillment Summary")
 
-    monthly_profit = profit_df.groupby("MONTH").agg({
-        "GROSS_PROFIT": "sum",
-        "NET_PROFIT": "sum"
-    }).reset_index()
+    stock_df = df[df["MONTH"].isin(last_3_months)].copy()
+    inventory_risk = stock_df.groupby("PRODUCTLINE")["SALES"].sum().sort_values().head(5).reset_index()
+    inventory_risk["Stock Risk"] = inventory_risk["SALES"].apply(lambda x: "⚠️ At Risk" if x < 10000 else "✅ Stable")
+    inventory_risk["Sales (£)"] = inventory_risk["SALES"].apply(lambda x: f"£{x:,.0f}")
 
-    monthly_profit["MONTH"] = monthly_profit["MONTH"].astype(str)
-    monthly_profit["Gross Profit (£)"] = monthly_profit["GROSS_PROFIT"].apply(lambda x: f"£{x:,.0f}")
-    monthly_profit["Net Profit (£)"] = monthly_profit["NET_PROFIT"].apply(lambda x: f"£{x:,.0f}")
-    display_profit = monthly_profit[["MONTH", "Gross Profit (£)", "Net Profit (£)"]].rename(columns={"MONTH": "Month"})
-
-    st.dataframe(display_profit, use_container_width=True)
-    total_net_profit = monthly_profit["NET_PROFIT"].sum()
-    st.markdown(f"### 🧾 Total Net Profit (Last 3 Months): **£{total_net_profit:,.0f}**")
-
-    # Waterfall Chart for Net Profit over 3 months
-    x_vals = monthly_profit["MONTH"].astype(str).tolist()
-    y_vals = monthly_profit["NET_PROFIT"].tolist()
-
-    waterfall_fig = go.Figure(go.Waterfall(
-        name="Net Profit",
-        orientation="v",
-        x=x_vals,
-        y=y_vals,
-        text=[f"£{val:,.0f}" for val in y_vals],
-        textposition="outside",
-        connector={"line": {"color": "gray"}},
-    ))
-
-    waterfall_fig.update_layout(
-        title="📉 Net Profit Walk (Last 3 Months)",
-        yaxis_title="Net Profit (£)",
-        waterfallgap=0.3,
-        margin=dict(t=50, b=30)
+    st.markdown("##### ❌ Inventory Stock Risk (Last 3 Months)")
+    st.dataframe(
+        inventory_risk[["PRODUCTLINE", "Sales (£)", "Stock Risk"]].rename(columns={"PRODUCTLINE": "Product Line"}),
+        use_container_width=True
     )
 
-    st.plotly_chart(waterfall_fig, use_container_width=True)
+    st.markdown("##### 🔮 Predicted Inventory Movement (Next Month)")
+    forecast_df = df[df["MONTH"].isin(last_3_months)]
+    forecast_summary = forecast_df.groupby("PRODUCTLINE")["QUANTITYORDERED"].mean().reset_index()
+    forecast_summary["Predicted Orders"] = forecast_summary["QUANTITYORDERED"].apply(lambda x: int(x))
+    fig_inventory = px.bar(
+        forecast_summary.sort_values("Predicted Orders", ascending=False).head(5),
+        x="PRODUCTLINE",
+        y="Predicted Orders",
+        title="Next Month Forecast: Top 5 Product Lines (by Orders)",
+        text="Predicted Orders"
+    )
+    fig_inventory.update_traces(texttemplate='%{text}', hovertemplate='Product Line: %{x}<br>Orders: %{y}')
+    fig_inventory.update_layout(xaxis_title="Product Line", yaxis_title="Forecasted Orders")
+    st.plotly_chart(fig_inventory, use_container_width=True)
+
 
 # 🔍 Insights Section
 st.markdown("### 🔍 Insights on Net Profit Walk")
