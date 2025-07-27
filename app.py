@@ -165,20 +165,27 @@ with left_col_1:
         use_container_width=True
     )
 
-    # Waterfall / Net Profit Walk Chart
-    st.markdown("#### 📉 Total Net Profit (Last 3 Months)")
-    total_net = profit_summary["Net Profit"].sum()
-    st.markdown(f"### 💼 Total Net Profit (Last 3 Months): £{total_net:,.0f}")
+   # Prepare data
+profit_summary = recent_3_months.groupby("MONTH")[["Net Profit"]].sum().reset_index()
 
-    waterfall_fig = px.waterfall(
-        profit_summary,
-        x="MONTH",
-        y="Net Profit",
-        title="Net Profit Walk (Last 3 Months)",
-        labels={"Net Profit": "Profit (£)", "MONTH": "Month"},
-    )
-    waterfall_fig.update_layout(showlegend=False)
-    st.plotly_chart(waterfall_fig, use_container_width=True)
+# Create waterfall chart using go.Figure
+waterfall_fig = go.Figure(go.Waterfall(
+    name="Net Profit",
+    orientation="v",
+    x=profit_summary["MONTH"],
+    y=profit_summary["Net Profit"],
+    connector={"line": {"color": "rgb(63, 63, 63)"}}
+))
+
+waterfall_fig.update_layout(
+    title="Net Profit Walk (Last 3 Months)",
+    xaxis_title="Month",
+    yaxis_title="Net Profit (£)",
+    showlegend=False
+)
+
+# Display the chart
+st.plotly_chart(waterfall_fig, use_container_width=True)
 
 # ===== RIGHT SIDE =====
 with right_col_1:
