@@ -161,28 +161,37 @@ with left_col_1:
     st.markdown(f"### 🧾 Total Net Profit (Last 3 Months): **£{total_net_profit:,.0f}**")
 
     # Waterfall Chart for Net Profit over 3 months
-waterfall_fig = px.waterfall(
-    monthly_profit,
-    x="MONTH",
-    y="NET_PROFIT",
+
+# Prepare values for Waterfall chart
+x_vals = monthly_profit["MONTH"].astype(str).tolist()
+y_vals = monthly_profit["NET_PROFIT"].tolist()
+
+# Create Waterfall chart using go
+waterfall_fig = go.Figure(go.Waterfall(
+    name="Net Profit",
+    orientation="v",
+    x=x_vals,
+    y=y_vals,
+    text=[f"£{val:,.0f}" for val in y_vals],
+    textposition="outside",
+    connector={"line": {"color": "gray"}},
+))
+
+waterfall_fig.update_layout(
     title="📉 Net Profit Walk (Last 3 Months)",
-    labels={"NET_PROFIT": "Net Profit (£)", "MONTH": "Month"},
-    text=monthly_profit["NET_PROFIT"].apply(lambda x: f"£{x:,.0f}"),
+    yaxis_title="Net Profit (£)",
+    waterfallgap=0.3,
+    margin=dict(t=50, b=30)
 )
 
-waterfall_fig.update_traces(
-    hovertemplate="Month: %{x}<br>Net Profit: £%{y:,.0f}",
-    connector={"line": {"color": "gray"}}
-)
-waterfall_fig.update_layout(yaxis_title="Net Profit (£)")
 st.plotly_chart(waterfall_fig, use_container_width=True)
 
-# ➕ Insights Section
+# 🔍 Insights Section
 st.markdown("### 🔍 Insights on Net Profit Walk")
 insights = [
-    "📈 Significant increase in net profit observed in the final month.",
-    "💸 Middle month had the lowest net gain, indicating possible high expenses or low revenue.",
-    "📊 Stable trend overall with room for optimization in operational costs."
+    "📈 Strong profit recovery in the final month suggests improved cost control or revenue boost.",
+    "💸 Mid-period dip likely due to elevated operating expenses or lower sales.",
+    "🧮 Consistent cash flow with actionable patterns for forecasting future months."
 ]
 for point in insights:
     st.markdown(f"- {point}")
