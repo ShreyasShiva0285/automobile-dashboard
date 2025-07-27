@@ -192,7 +192,37 @@ with left_col_2:
 
 
 with right_col_2:
-    st.markdown("<!-- Reserved for future content -->")
+   with right_col_2:
+    st.markdown("#### 🧑‍💼 Top 5 Clients (By Sales)")
+    top_clients = (
+        df.groupby(["CUSTOMERNAME", "COUNTRY"])["SALES"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(5)
+        .reset_index()
+    )
+    top_clients["Total Sales (£)"] = top_clients["SALES"].apply(lambda x: f"£{x:,.0f}")
+    st.dataframe(
+        top_clients[["CUSTOMERNAME", "COUNTRY", "Total Sales (£)"]]
+        .rename(columns={"CUSTOMERNAME": "Client", "COUNTRY": "Country"}),
+        use_container_width=True
+    )
+
+    st.markdown("#### 📊 Top 5 Clients: Sales Performance")
+    fig = px.bar(
+        top_clients,
+        x="CUSTOMERNAME",
+        y="SALES",
+        color="COUNTRY",
+        title="Sales Performance of Top 5 Clients",
+        text="SALES"
+    )
+    fig.update_traces(
+        hovertemplate='Client: %{x}<br>Sales: £%{y:,.0f}',
+        texttemplate='£%{y:,.0f}'
+    )
+    fig.update_layout(xaxis_title="Client", yaxis_title="Sales (£)")
+    st.plotly_chart(fig, use_container_width=True)
 
 # === Export Option ===
 st.markdown("### 📁 Export Raw Data")
