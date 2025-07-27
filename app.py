@@ -98,8 +98,19 @@ with top_cols[2]:
     st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>📈 3-Month Growth</h5><h3>{growth_rate:.2f}%</h3></div></div>", unsafe_allow_html=True)
 
 bottom_cols = st.columns(3)
+
+# 🔮 Predicted Revenue
 with bottom_cols[0]:
-    st.markdown(f"<div style='{box_wrapper}'><div style='{box_style}'><h5>🔮 Predicted Revenue ({predicted_month_name})</h5><h3>£{next_month_prediction:,.0f}</h3></div></div>", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style='{box_wrapper}'>
+        <div style='{box_style}'>
+            <h5>🔮 Predicted Revenue ({predicted_month_name})</h5>
+            <h3>£{next_month_prediction:,.0f}</h3>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# 📦 Orders Status + Accuracy
 with bottom_cols[1]:
     combined_orders_html = f"""
     <div style='{box_wrapper}'>
@@ -113,28 +124,24 @@ with bottom_cols[1]:
                     <strong>Not Shipped:</strong><br> {not_shipped:,}
                 </div>
             </div>
-            <hr style='margin: 8px 0;'>
-            <div style='text-align: left; font-size: 13px; line-height: 1.4;'>
-                ✅ <strong>Dashboard Accuracy:</strong> 93.7%<br>
-                📊 <strong>Confidence Level:</strong> High
-            </div>
         </div>
     </div>
     """
     st.markdown(combined_orders_html, unsafe_allow_html=True)
 
-st.markdown("---")
-
-left_col_1, right_col_1 = st.columns(2)
-left_col_1, right_col_1 = st.columns(2)
-
-with right_col_1:
-    st.markdown("#### 🏆 Top 3 Product Lines (Last 3 Months)")
-    recent_3_months = df[df["MONTH"].isin(last_3_months)]
-    top_3_productlines = recent_3_months.groupby("PRODUCTLINE")["SALES"].sum().sort_values(ascending=False).head(3).reset_index()
-    top_3_productlines["Total Sales"] = top_3_productlines["SALES"].apply(lambda x: f"£{x:,.0f}")
-    st.dataframe(top_3_productlines[["PRODUCTLINE", "Total Sales"]].rename(columns={"PRODUCTLINE": "Product Line"}), use_container_width=True)
-
+# 📊 Dashboard Accuracy & Confidence (separate box)
+with bottom_cols[2]:
+    st.markdown(f"""
+    <div style='{box_wrapper}'>
+        <div style='{box_style}'>
+            <h5>📊 Dashboard Quality</h5>
+            <div style='text-align: left; font-size: 14px; line-height: 1.6;'>
+                🎯 <strong>Accuracy:</strong> 93.7%<br>
+                🔐 <strong>Confidence Level:</strong> High
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
    
 with left_col_1:
     st.markdown("#### 💵 Gross & Net Profit Analysis (Last 3 Months)")
