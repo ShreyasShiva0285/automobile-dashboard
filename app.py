@@ -144,53 +144,38 @@ with bottom_cols[2]:
     """, unsafe_allow_html=True)
 
 # ✅ FIX: Define columns before using
+# === Left & Right Columns for Profit Analysis and Inventory ===
 left_col_1, right_col_1 = st.columns(2)
 
-# ===== LEFT SIDE =====
 with left_col_1:
     st.markdown("#### 💵 Gross & Net Profit Analysis (Last 3 Months)")
+    # Your existing gross/net profit data and table code here...
 
-    recent_3_months = df[df["MONTH"].isin(last_3_months)].copy()
-    recent_3_months["Gross Profit"] = recent_3_months["SALES"] - recent_3_months["RAW_MATERIAL_COST"]
-    recent_3_months["Net Profit"] = recent_3_months["Gross Profit"] - recent_3_months["OPERATING_EXPENSES"]
+    # ✅ Net Profit Walk chart directly below
+    st.markdown("#### 📉 Net Profit Walk (Last 3 Months)")
 
-    profit_summary = recent_3_months.groupby("MONTH")[["Gross Profit", "Net Profit"]].sum().reset_index()
+    profit_summary = recent_3_months.groupby("MONTH")[["Net Profit"]].sum().reset_index()
+    profit_summary["MonthStr"] = profit_summary["MONTH"].dt.strftime("%B %Y")
 
-    st.dataframe(
-        profit_summary.rename(columns={
-            "MONTH": "Month",
-            "Gross Profit": "Gross Profit (£)",
-            "Net Profit": "Net Profit (£)"
-        }),
-        use_container_width=True
+    waterfall_fig = go.Figure(go.Waterfall(
+        name="Net Profit",
+        orientation="v",
+        x=profit_summary["MonthStr"],
+        y=profit_summary["Net Profit"],
+        connector={"line": {"color": "rgb(63, 63, 63)"}},
+        increasing={"marker":{"color":"green"}},
+        decreasing={"marker":{"color":"red"}},
+    ))
+
+    waterfall_fig.update_layout(
+        title="Net Profit Walk (Last 3 Months)",
+        xaxis_title="Month",
+        yaxis_title="Net Profit (£)",
+        showlegend=False
     )
 
-# Prepare data
-profit_summary = recent_3_months.groupby("MONTH")[["Net Profit"]].sum().reset_index()
+    st.plotly_chart(waterfall_fig, use_container_width=True)
 
-# ✅ Convert Timestamp to string to avoid JSON serialization issues
-profit_summary["MonthStr"] = profit_summary["MONTH"].dt.strftime("%B %Y")
-
-# Create waterfall chart
-waterfall_fig = go.Figure(go.Waterfall(
-    name="Net Profit",
-    orientation="v",
-    x=profit_summary["MonthStr"],
-    y=profit_summary["Net Profit"],
-    connector={"line": {"color": "rgb(63, 63, 63)"}}
-))
-
-waterfall_fig.update_layout(
-    title="Net Profit Walk (Last 3 Months)",
-    xaxis_title="Month",
-    yaxis_title="Net Profit (£)",
-    showlegend=False
-)
-
-# Plot it
-st.plotly_chart(waterfall_fig, use_container_width=True)
-
-# ===== RIGHT SIDE =====
 with right_col_1:
     st.markdown("#### 📦 Inventory & Fulfillment Summary")
 
