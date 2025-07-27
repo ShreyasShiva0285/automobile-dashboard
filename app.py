@@ -153,16 +153,21 @@ left_col_1, right_col_1 = st.columns(2)
 with left_col_1:
     st.markdown("#### 💵 Gross & Net Profit Analysis (Last 3 Months)")
 
-    # Compute Net Profit from available cost fields
+    # Calculate Profit Metrics
     df["TOTAL_COST"] = df["RAW_MATERIAL_COST"] + df["OPERATING_EXPENSES"]
+    df["GROSS_PROFIT"] = df["SALES"] - df["RAW_MATERIAL_COST"]
     df["NET_PROFIT"] = df["SALES"] - df["TOTAL_COST"]
 
     recent_3_months = df[df["MONTH"].isin(last_3_months)].copy()
-    monthly_profit = recent_3_months.groupby("MONTH")[["NET_PROFIT"]].sum().reset_index()
+    monthly_summary = recent_3_months.groupby("MONTH").agg({
+        "SALES": "sum",
+        "GROSS_PROFIT": "sum",
+        "NET_PROFIT": "sum"
+    }).reset_index()
 
-    # Prepare values for Waterfall chart
-    x_vals = monthly_profit["MONTH"].astype(str).tolist()
-    y_vals = monthly_profit["NET_PROFIT"].tolist()
+    # Waterfall Chart
+    x_vals = monthly_summary["MONTH"].astype(str).tolist()
+    y_vals = monthly_summary["NET_PROFIT"].tolist()
 
     st.markdown("#### 📉 Net Profit Walk (Last 3 Months)")
     waterfall_fig = go.Figure(go.Waterfall(
@@ -174,15 +179,23 @@ with left_col_1:
         textposition="outside",
         connector={"line": {"color": "gray"}},
     ))
-
     waterfall_fig.update_layout(
         yaxis_title="Net Profit (£)",
         title="",
         waterfallgap=0.3,
         margin=dict(t=30, b=30)
     )
-
     st.plotly_chart(waterfall_fig, use_container_width=True)
+
+    # Add Gross & Net Profit Summary Table
+    monthly_summary["Sales (£)"] = monthly_summary["SALES"].apply(lambda x: f"£{x:,.0f}")
+    monthly_summary["Gross Profit (£)"] = monthly_summary["GROSS_PROFIT"].apply(lambda x: f"£{x:,.0f}")
+    monthly_summary["Net Profit (£)"] = monthly_summary["NET_PROFIT"].apply(lambda x: f"£{x:,.0f}")
+    st.markdown("##### 📋 Profit Summary Table (Last 3 Months)")
+    st.dataframe(
+        monthly_summary[["MONTH", "Sales (£)", "Gross Profit (£)", "Net Profit (£)"]].rename(columns={"MONTH": "Month"}),
+        use_container_width=True
+    )
 
 with right_col_1:
     st.markdown("#### 📦 Inventory & Fulfillment Summary")
