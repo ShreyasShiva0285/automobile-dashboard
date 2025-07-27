@@ -174,6 +174,32 @@ insights = [
 ]
 for point in insights:
     st.markdown(f"- {point}")
+insight_col1, insight_col2 = st.columns(2)
+
+with insight_col1:
+    st.markdown("#### ❌ Lowest-Selling Product Line & Clients")
+    lowest_line = recent_3_months.groupby("PRODUCTLINE")["SALES"].sum().sort_values().head(1).reset_index()
+    low_product_line = lowest_line.iloc[0]["PRODUCTLINE"]
+    low_customers = recent_3_months[recent_3_months["PRODUCTLINE"] == low_product_line].groupby("CUSTOMERNAME")["SALES"].sum().reset_index()
+    low_customers["Sales (£)"] = low_customers["SALES"].apply(lambda x: f"£{x:,.0f}")
+    st.write(f"📉 Lowest Product Line: **{low_product_line}**")
+    st.dataframe(low_customers[["CUSTOMERNAME", "Sales (£)"]].rename(columns={"CUSTOMERNAME": "Customer"}), use_container_width=True)
+
+with insight_col2:
+    st.markdown("#### 🔮 Forecast: Next Month Sales (Top Product Lines)")
+    forecasted_productline = df[df["PRODUCTLINE"].isin(top_3_productlines["PRODUCTLINE"])]
+    productline_forecast = forecasted_productline.groupby("PRODUCTLINE")["SALES"].mean().reset_index()
+    productline_forecast["Predicted Sales"] = productline_forecast["SALES"]
+    fig_forecast_pie = px.pie(
+        productline_forecast,
+        values="Predicted Sales",
+        names="PRODUCTLINE",
+        title="Next Month Forecast (Top 3 Product Lines)",
+        hole=0.3
+    )
+    fig_forecast_pie.update_traces(textinfo='percent+label', hovertemplate='Product Line: %{label}<br>£%{value:,.0f}')
+    st.plotly_chart(fig_forecast_pie, use_container_width=True)
+
 
 left_col_2, right_col_2 = st.columns(2)
 
