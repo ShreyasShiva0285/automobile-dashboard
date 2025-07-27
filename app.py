@@ -152,16 +152,19 @@ left_col_1, right_col_1 = st.columns(2)
 
 with left_col_1:
     st.markdown("#### 💵 Gross & Net Profit Analysis (Last 3 Months)")
-    # Your existing left-side profit summary chart or table here...
 
-    # Add Net Profit Waterfall Graph BELOW in left column
-    st.markdown("#### 📉 Net Profit Walk (Last 3 Months)")
+    # Compute Net Profit from available cost fields
+    df["TOTAL_COST"] = df["RAW_MATERIAL_COST"] + df["OPERATING_EXPENSES"]
+    df["NET_PROFIT"] = df["SALES"] - df["TOTAL_COST"]
+
+    recent_3_months = df[df["MONTH"].isin(last_3_months)].copy()
+    monthly_profit = recent_3_months.groupby("MONTH")[["NET_PROFIT"]].sum().reset_index()
 
     # Prepare values for Waterfall chart
     x_vals = monthly_profit["MONTH"].astype(str).tolist()
     y_vals = monthly_profit["NET_PROFIT"].tolist()
 
-    # Create Waterfall chart using go
+    st.markdown("#### 📉 Net Profit Walk (Last 3 Months)")
     waterfall_fig = go.Figure(go.Waterfall(
         name="Net Profit",
         orientation="v",
@@ -174,8 +177,9 @@ with left_col_1:
 
     waterfall_fig.update_layout(
         yaxis_title="Net Profit (£)",
+        title="",
         waterfallgap=0.3,
-        margin=dict(t=50, b=30)
+        margin=dict(t=30, b=30)
     )
 
     st.plotly_chart(waterfall_fig, use_container_width=True)
