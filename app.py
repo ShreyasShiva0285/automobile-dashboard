@@ -140,29 +140,42 @@ with left_col_1:
 left_col_2, right_col_2 = st.columns(2)
 
 with left_col_2:
-    st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
-    if "PURCHASE_CATEGORY" in df.columns and "PURCHASE_EXPENSE" in df.columns:
-        recent_purchases = df[df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()]
-        burn_data = recent_purchases.groupby(["MONTH", "PURCHASE_CATEGORY"])["PURCHASE_EXPENSE"].sum().reset_index()
-        burn_data["MONTH"] = burn_data["MONTH"].astype(str)
+    st.markdown("#### 💸 Cash Burn Analysis & Purchase Expenses (Last 3 Months)")
 
-        top_burns = burn_data.groupby("PURCHASE_CATEGORY")["PURCHASE_EXPENSE"].sum().sort_values(ascending=False).head(3).reset_index()
-        top_burns["Total (£)"] = top_burns["PURCHASE_EXPENSE"].apply(lambda x: f"£{x:,.0f}")
-        st.dataframe(top_burns[["PURCHASE_CATEGORY", "Total (£)"]].rename(columns={"PURCHASE_CATEGORY": "Category"}), use_container_width=True)
+    if "PURCHASE_CATEGORY" in df.columns:
+        # Filter last 3 months
+        recent_data = df[df["MONTH"].isin(last_3_months)].copy()
 
-        fig_burn = px.area(
-            burn_data,
+        # 🔹 1. Total Cash Burn
+        recent_data["CASH_BURN"] = recent_data["RAW_MATERIAL_COST"] + recent_data["OPERATING_EXPENSES"]
+        total_burn = recent_data["CASH_BURN"].sum()
+        st.metric("🔥 Total Cash Burn (Last 3 Months)", f"£{total_burn:,.0f}")
+
+        # 🔹 2. Purchase Expense by Category
+        category_expense = recent_data.groupby("PURCHASE_CATEGORY")["CASH_BURN"].sum().sort_values(ascending=False).reset_index()
+        top_3_categories = category_expense.head(3)
+        top_3_categories["Expense (£)"] = top_3_categories["CASH_BURN"].apply(lambda x: f"£{x:,.0f}")
+        st.markdown("##### 🧾 Top 3 Expense Categories")
+        st.dataframe(top_3_categories[["PURCHASE_CATEGORY", "Expense (£)"]].rename(columns={"PURCHASE_CATEGORY": "Category"}), use_container_width=True)
+
+        # 🔹 3. Area Chart of Monthly Category-wise Expense
+        burn_trend = recent_data.groupby(["MONTH", "PURCHASE_CATEGORY"])["CASH_BURN"].sum().reset_index()
+        burn_trend["MONTH"] = burn_trend["MONTH"].astype(str)
+
+        fig = px.area(
+            burn_trend[burn_trend["PURCHASE_CATEGORY"].isin(top_3_categories["PURCHASE_CATEGORY"])],
             x="MONTH",
-            y="PURCHASE_EXPENSE",
+            y="CASH_BURN",
             color="PURCHASE_CATEGORY",
-            title="Top Expense Categories Over Last 3 Months",
+            title="📈 Monthly Cash Burn by Category (Top 3)",
             line_group="PURCHASE_CATEGORY"
         )
-        fig_burn.update_layout(yaxis_title="Expense (£)", xaxis_title="Month")
-        fig_burn.update_traces(hovertemplate='Month: %{x}<br>Category: %{legendgroup}<br>Expense: £%{y:,.0f}')
-        st.plotly_chart(fig_burn, use_container_width=True)
+        fig.update_layout(yaxis_title="Expense (£)", xaxis_title="Month")
+        fig.update_traces(hovertemplate='Month: %{x}<br>Category: %{legendgroup}<br>Expense: £%{y:,.0f}')
+        st.plotly_chart(fig, use_container_width=True)
+
     else:
-        st.warning("PURCHASE_CATEGORY or PURCHASE_EXPENSE column not found in data.")
+        st.warning("PURCHASE_CATEGORY column not found in data.")
 
 with right_col_2:
     st.markdown("<!-- Reserved for future content -->")
