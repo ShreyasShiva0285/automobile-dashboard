@@ -158,20 +158,19 @@ with left_col_2:
         st.markdown("##### 🧾 Top 3 Expense Categories")
         st.dataframe(top_3_categories[["PURCHASE_CATEGORY", "Expense (£)"]].rename(columns={"PURCHASE_CATEGORY": "Category"}), use_container_width=True)
 
-        # 🔹 3. Area Chart of Monthly Category-wise Expense
-        burn_trend = recent_data.groupby(["MONTH", "PURCHASE_CATEGORY"])["CASH_BURN"].sum().reset_index()
-        burn_trend["MONTH"] = burn_trend["MONTH"].astype(str)
-
-        fig = px.area(
+                # 🔹 3. Grouped Bar Chart of Monthly Cash Burn by Category
+        fig = px.bar(
             burn_trend[burn_trend["PURCHASE_CATEGORY"].isin(top_3_categories["PURCHASE_CATEGORY"])],
             x="MONTH",
             y="CASH_BURN",
             color="PURCHASE_CATEGORY",
-            title="📈 Monthly Cash Burn by Category (Top 3)",
-            line_group="PURCHASE_CATEGORY"
+            barmode="group",
+            title="📊 Monthly Cash Burn by Category (Top 3)",
+            labels={"CASH_BURN": "Expense (£)", "MONTH": "Month"},
+            text_auto=".2s"
         )
         fig.update_layout(yaxis_title="Expense (£)", xaxis_title="Month")
-        fig.update_traces(hovertemplate='Month: %{x}<br>Category: %{legendgroup}<br>Expense: £%{y:,.0f}')
+        fig.update_traces(texttemplate='£%{y:,.0f}', hovertemplate='Month: %{x}<br>Category: %{legendgroup}<br>Expense: £%{y:,.0f}')
         st.plotly_chart(fig, use_container_width=True)
 
     else:
