@@ -445,8 +445,6 @@ with right_col_2:
             columns={"OPERATING_EXPENSES": "CASH_BURN"}
         )
 
-from sklearn.linear_model import LinearRegression  # <-- Make sure this is included
-
 # ML Model: Linear Regression for Predicting Future Cash Burn
 def linear_regression_forecast(cash_burn_data):
     X = np.array(range(len(cash_burn_data))).reshape(-1, 1)
@@ -454,7 +452,7 @@ def linear_regression_forecast(cash_burn_data):
 
     model = LinearRegression()
     model.fit(X, y)
-    future_month = np.array([[len(cash_burn_data)]])
+    future_month = np.array([[len(cash_burn_data)]])  # Predicting the next month
     forecast = model.predict(future_month)
     return forecast[0]
 
@@ -463,12 +461,7 @@ forecast_cash_burn = linear_regression_forecast(recent_purchases["CASH_BURN"])
 st.markdown(f"**Cash Burn Forecast for Next Month:** £{forecast_cash_burn:,.0f}")
 
 # Display Cash Burn Visualization
-fig_cash_burn = px.line(
-    recent_purchases,
-    x="MONTH",
-    y="CASH_BURN",
-    title="Cash Burn (Last 3 Months)",
-)
+fig_cash_burn = px.line(recent_purchases, x="MONTH", y="CASH_BURN", title="Cash Burn (Last 3 Months)")
 st.plotly_chart(fig_cash_burn, use_container_width=True)
 
         # Predict next month's cash burn for top 3 categories
