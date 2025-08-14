@@ -283,7 +283,7 @@ with left_col_1:
         return forecast[0]
 
     # ARIMA Prediction for Gross Profit (Next Month)
-    next_month_gross_profit_arima = arima_forecast_profit(monthly_summary["GROSS_PROFIT"])
+    next_month_gross_profit_arima = arima_forecast_profit(monthly_summary["Gross Profit"])
 
     # === LSTM Model for Net Profit Prediction ===
     def lstm_forecast_profit(profit_data):
