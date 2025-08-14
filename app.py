@@ -100,7 +100,12 @@ def generate_pdf():
     pdf.cell(200, 10, txt=f"3-Month Growth Rate: {growth_rate:.2f}%", ln=True)
     pdf.cell(200, 10, txt=f"Predicted Revenue ({predicted_month_name} - ARIMA): £{next_month_prediction_arima:,.0f}", ln=True)
     pdf.cell(200, 10, txt=f"Predicted Revenue ({predicted_month_name} - LSTM): £{next_month_prediction_lstm:,.0f}", ln=True)
-    pdf.cell(200, 10, txt=f"Orders Shipped: {shipped:,}", ln=True)
+    # If 'shipped' is not a valid number (int or float), set it to 0
+if not isinstance(shipped, (int, float)):
+    shipped = 0  # Or some other default value you'd like
+
+# Now safely format and create the PDF cell
+pdf.cell(200, 10, txt=f"Orders Shipped: {shipped:,}", ln=True)
     pdf.cell(200, 10, txt=f"Orders Not Shipped: {not_shipped:,}", ln=True)
     return pdf.output(dest='S').encode('latin-1')
 
