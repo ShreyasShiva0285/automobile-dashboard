@@ -428,6 +428,8 @@ def app():
         fig_forecast_pie.update_traces(textinfo='percent+label', hovertemplate='Product Line: %{label}<br>£%{value:,.0f}')
         st.plotly_chart(fig_forecast_pie, use_container_width=True)
 
+left_col_2, right_col_2 = st.columns(2)
+
    # === Right Column for Cash Burn and Client Sales ===
 with right_col_2:
     st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
