@@ -276,11 +276,46 @@ with left_col_1:
     )
 
     # === ML Model for Gross Profit Prediction (ARIMA) ===
-    def arima_forecast_profit(profit_data):
-        model = ARIMA(profit_data, order=(1, 1, 1))
-        model_fit = model.fit()
-        forecast = model_fit.forecast(steps=1)
-        return forecast[0]
+    # === Check if 'GROSS_PROFIT' exists in monthly_summary ===
+if "GROSS_PROFIT" not in monthly_summary.columns:
+    st.error("Missing 'GROSS_PROFIT' column in monthly summary")
+    # You can add logic to handle this if the column is missing
+    # For example, calculate it if SALES and RAW_MATERIAL_COST are available
+    if "SALES" in monthly_summary.columns and "RAW_MATERIAL_COST" in monthly_summary.columns:
+        monthly_summary["GROSS_PROFIT"] = monthly_summary["SALES"] - monthly_summary["RAW_MATERIAL_COST"]
+    else:
+        st.error("Cannot calculate 'GROSS_PROFIT'. Missing necessary columns.")
+        st.stop()  # Stop execution if needed columns are missing
+
+# === ARIMA Forecast Function for Gross Profit ===
+def arima_forecast_profit(profit_series: pd.Series):
+    """Forecast the next month's gross profit using ARIMA."""
+    # Ensure the data is numeric and drop any NaN values
+    profit_series = pd.to_numeric(profit_series, errors="coerce").dropna()
+    
+    # If there are not enough data points (less than 3), return None
+    if len(profit_series) < 3:
+        return None
+    
+    # Fit the ARIMA model (order=(1,1,1) is a basic ARIMA model)
+    model = ARIMA(profit_series, order=(1, 1, 1))
+    model_fit = model.fit()
+    
+    # Forecast the next month's gross profit
+    forecast = model_fit.forecast(steps=1)
+    
+    # Return the first forecast value (next month's prediction)
+    return float(forecast[0])
+
+# === Run ARIMA Forecast on GROSS_PROFIT Column ===
+next_month_gross_profit_arima = arima_forecast_profit(monthly_summary["GROSS_PROFIT"])
+
+# === Display ARIMA Prediction Result ===
+if next_month_gross_profit_arima is not None:
+    st.markdown(f"**Gross Profit Prediction (ARIMA):** £{next_month_gross_profit_arima:,.0f}")
+else:
+    st.markdown("**Gross Profit Prediction (ARIMA):** Not enough data to forecast.")
+
 
     # --- Replace your current "ARIMA Prediction for Gross Profit" lines with this ---
 
