@@ -496,48 +496,46 @@ st.dataframe(
     use_container_width=True,
 )
 
-       # Cash Burn Trend (Bar Chart)
-burn_trend = (
-    recent_purchases.groupby(["MONTH", "PURCHASE_CATEGORY"])["CASH_BURN"]
-    .sum()
-    .reset_index()
-)
-burn_trend["MONTH"] = burn_trend["MONTH"].astype(str)
+    # Cash Burn Trend (Bar Chart)
+    burn_trend = (
+        recent_purchases.groupby(["MONTH", "PURCHASE_CATEGORY"])["CASH_BURN"]
+        .sum()
+        .reset_index()
+    )
+    burn_trend["MONTH"] = burn_trend["MONTH"].astype(str)
 
-fig = px.bar(
-    burn_trend[
-        burn_trend["PURCHASE_CATEGORY"].isin(top_3_categories["PURCHASE_CATEGORY"])
-    ],
-    x="MONTH",
-    y="CASH_BURN",
-    color="PURCHASE_CATEGORY",
-    barmode="group",
-    title="📊 Monthly Cash Burn by Category (Top 3)",
-    labels={"CASH_BURN": "Expense (£)", "MONTH": "Month"},
-    text_auto=".2s",
-)
-fig.update_layout(yaxis_title="Expense (£)", xaxis_title="Month")
-fig.update_traces(
-    texttemplate="£%{y:,.0f}",
-    hovertemplate="Month: %{x}<br>Category: %{legendgroup}<br>Expense: £%{y:,.0f}",
-)
-st.plotly_chart(fig, use_container_width=True)
-
+    fig = px.bar(
+        burn_trend[
+            burn_trend["PURCHASE_CATEGORY"].isin(top_3_categories["PURCHASE_CATEGORY"])
+        ],
+        x="MONTH",
+        y="CASH_BURN",
+        color="PURCHASE_CATEGORY",
+        barmode="group",
+        title="📊 Monthly Cash Burn by Category (Top 3)",
+        labels={"CASH_BURN": "Expense (£)", "MONTH": "Month"},
+        text_auto=".2s",
+    )
+    fig.update_layout(yaxis_title="Expense (£)", xaxis_title="Month")
+    fig.update_traces(
+        texttemplate="£%{y:,.0f}",
+        hovertemplate="Month: %{x}<br>Category: %{legendgroup}<br>Expense: £%{y:,.0f}",
+    )
+    st.plotly_chart(fig, use_container_width=True)
 else:
     st.warning("PURCHASE_CATEGORY or OPERATING_EXPENSES column not found in data.")
 
-    # === Deep Learning for Sales Prediction (Top Clients) ===
-    st.markdown("#### 🧑‍💼 Top 5 Clients (Sales Performance Prediction)")
+# === Deep Learning for Sales Prediction (Top Clients) ===
+st.markdown("#### 🧑‍💼 Top 5 Clients (Sales Performance Prediction)")
 
-    # Prepare Data for LSTM Model (Top Clients)
-    top_clients = (
-        df.groupby(["CUSTOMERNAME", "COUNTRY"])["SALES"]
-        .sum()
-        .sort_values(ascending=False)
-        .head(5)
-        .reset_index()
-    )
-
+# Prepare Data for LSTM Model (Top Clients)
+top_clients = (
+    df.groupby(["CUSTOMERNAME", "COUNTRY"])["SALES"]
+    .sum()
+    .sort_values(ascending=False)
+    .head(5)
+    .reset_index()
+)
     # LSTM Sales Prediction Model
     def lstm_sales_forecast(sales_data):
         # Prepare data for LSTM
