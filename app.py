@@ -487,15 +487,14 @@ st.dataframe(
     use_container_width=True
 )
        
-top_3_categories["Predicted Next Month (£)"] = top_3_categories[
-            "Next Month Prediction (£)"
-        ]
-        st.dataframe(
-top_3_categories[
-                ["PURCHASE_CATEGORY", "Total (£)", "Predicted Next Month (£)"]
-            ].rename(columns={"PURCHASE_CATEGORY": "Category"}),
-            use_container_width=True,
-        )
+top_3_categories["Predicted Next Month (£)"] = top_3_categories["Next Month Prediction (£)"]
+
+# This should be aligned with the rest of the code at the same indentation level
+st.dataframe(
+    top_3_categories[["PURCHASE_CATEGORY", "Total (£)", "Predicted Next Month (£)"]]
+    .rename(columns={"PURCHASE_CATEGORY": "Category"}),
+    use_container_width=True,
+)
 
         # Cash Burn Trend (Bar Chart)
         burn_trend = (
