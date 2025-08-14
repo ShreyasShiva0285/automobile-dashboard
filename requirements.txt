@@ -7,3 +7,4 @@ matplotlib
 tensorflow
 keras
 plotly
+fpdf
