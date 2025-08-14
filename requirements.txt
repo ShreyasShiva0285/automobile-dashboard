@@ -1,5 +1,5 @@
-streamlit
 statsmodels==0.13.5
+streamlit
 pandas
 numpy
 scipy
