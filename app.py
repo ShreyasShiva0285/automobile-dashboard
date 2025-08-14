@@ -88,6 +88,9 @@ def lstm_forecast(monthly_rev):
 
 next_month_prediction_lstm = lstm_forecast(monthly_rev)
 
+from fpdf import FPDF
+from datetime import datetime
+
 # Function to generate the PDF report
 def generate_pdf(total_revenue, latest_month, latest_month_revenue, growth_rate, predicted_month_name, 
                  next_month_prediction_arima, next_month_prediction_lstm, shipped, not_shipped):
@@ -139,6 +142,7 @@ pdf_bytes = generate_pdf(total_revenue, latest_month, latest_month_revenue, grow
                          shipped, not_shipped)
 
 # You can now use pdf_bytes for further processing (e.g., saving or sending the PDF)
+
 
 # === Header ===
 st.markdown(f"""
