@@ -282,8 +282,40 @@ with left_col_1:
         forecast = model_fit.forecast(steps=1)
         return forecast[0]
 
-    # ARIMA Prediction for Gross Profit (Next Month)
-    next_month_gross_profit_arima = arima_forecast_profit(monthly_summary["GROSS_PROFIT"])
+    # --- Replace your current "ARIMA Prediction for Gross Profit" lines with this ---
+
+def arima_forecast_profit(profit_series: pd.Series):
+    """Safe ARIMA forecast for a 1‑step ahead value."""
+    # coerce to numeric and drop NAs
+    s = pd.to_numeric(profit_series, errors="coerce").dropna()
+    # ARIMA needs at least 3 points to difference and fit stably
+    if len(s) < 3:
+        return None
+    # use a simple integer index so statsmodels doesn't choke on PeriodIndex
+    s = s.reset_index(drop=True)
+    model = ARIMA(s, order=(1, 1, 1))
+    model_fit = model.fit()
+    forecast = model_fit.forecast(steps=1)
+    return float(forecast.iloc[0])  # <- use iloc, not [0]
+
+# Pick the correct gross profit column or compute it if missing
+if "Gross Profit" in monthly_summary.columns:
+    gp_series = monthly_summary["Gross Profit"]
+elif "GROSS_PROFIT" in monthly_summary.columns:
+    gp_series = monthly_summary["GROSS_PROFIT"]
+else:
+    # Fall back: compute from the raw df if we can
+    if {"SALES", "RAW_MATERIAL_COST", "MONTH"}.issubset(df.columns):
+        gp_series = (
+            df[df["MONTH"].isin(last_3_months)]
+            .groupby("MONTH")
+            .apply(lambda x: (x["SALES"] - x["RAW_MATERIAL_COST"]).sum())
+        )
+        gp_series.name = "Gross Profit"
+    else:
+        gp_series = pd.Series(dtype=float)
+
+next_month_gross_profit_arima = arima_forecast_profit(gp_series)
 
     # === LSTM Model for Net Profit Prediction ===
     def lstm_forecast_profit(profit_data):
