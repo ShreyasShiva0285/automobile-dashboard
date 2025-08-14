@@ -284,38 +284,36 @@ with left_col_1:
 
     # --- Replace your current "ARIMA Prediction for Gross Profit" lines with this ---
 
+# Check if 'GROSS_PROFIT' exists in monthly_summary
+if "GROSS_PROFIT" not in monthly_summary.columns:
+    st.error("Missing 'GROSS_PROFIT' column in monthly summary")
+    # You can add logic to handle this if the column is missing
+    # For example, calculate it if SALES and RAW_MATERIAL_COST are available
+    if "SALES" in monthly_summary.columns and "RAW_MATERIAL_COST" in monthly_summary.columns:
+        monthly_summary["GROSS_PROFIT"] = monthly_summary["SALES"] - monthly_summary["RAW_MATERIAL_COST"]
+    else:
+        st.error("Cannot calculate 'GROSS_PROFIT'. Missing necessary columns.")
+        st.stop()  # Stop execution if needed columns are missing
+
+# ARIMA Forecast Function
 def arima_forecast_profit(profit_series: pd.Series):
-    """Safe ARIMA forecast for a 1‑step ahead value."""
-    # coerce to numeric and drop NAs
-    s = pd.to_numeric(profit_series, errors="coerce").dropna()
-    # ARIMA needs at least 3 points to difference and fit stably
-    if len(s) < 3:
+    """Forecast the next month's gross profit using ARIMA."""
+    profit_series = pd.to_numeric(profit_series, errors="coerce").dropna()
+    if len(profit_series) < 3:  # ARIMA needs at least 3 data points
         return None
-    # use a simple integer index so statsmodels doesn't choke on PeriodIndex
-    s = s.reset_index(drop=True)
-    model = ARIMA(s, order=(1, 1, 1))
+    # Fit the ARIMA model
+    model = ARIMA(profit_series, order=(1, 1, 1))
     model_fit = model.fit()
     forecast = model_fit.forecast(steps=1)
-    return float(forecast.iloc[0])  # <- use iloc, not [0]
+    return float(forecast.iloc[0])  # Use .iloc to access by position
 
-# Pick the correct gross profit column or compute it if missing
-if "Gross Profit" in monthly_summary.columns:
-    gp_series = monthly_summary["Gross Profit"]
-elif "GROSS_PROFIT" in monthly_summary.columns:
-    gp_series = monthly_summary["GROSS_PROFIT"]
+# Now access the GROSS_PROFIT column
+next_month_gross_profit_arima = arima_forecast_profit(monthly_summary["GROSS_PROFIT"])
+
+if next_month_gross_profit_arima is not None:
+    st.markdown(f"**Gross Profit Prediction (ARIMA):** £{next_month_gross_profit_arima:,.0f}")
 else:
-    # Fall back: compute from the raw df if we can
-    if {"SALES", "RAW_MATERIAL_COST", "MONTH"}.issubset(df.columns):
-        gp_series = (
-            df[df["MONTH"].isin(last_3_months)]
-            .groupby("MONTH")
-            .apply(lambda x: (x["SALES"] - x["RAW_MATERIAL_COST"]).sum())
-        )
-        gp_series.name = "Gross Profit"
-    else:
-        gp_series = pd.Series(dtype=float)
-
-next_month_gross_profit_arima = arima_forecast_profit(gp_series)
+    st.markdown("**Gross Profit Prediction (ARIMA):** Not enough data to forecast.")
 
     # === LSTM Model for Net Profit Prediction ===
     def lstm_forecast_profit(profit_data):
