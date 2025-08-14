@@ -491,7 +491,7 @@ top_3_categories["Predicted Next Month (£)"] = top_3_categories[
             "Next Month Prediction (£)"
         ]
         st.dataframe(
-            top_3_categories[
+top_3_categories[
                 ["PURCHASE_CATEGORY", "Total (£)", "Predicted Next Month (£)"]
             ].rename(columns={"PURCHASE_CATEGORY": "Category"}),
             use_container_width=True,
