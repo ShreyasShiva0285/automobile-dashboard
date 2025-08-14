@@ -1,3 +1,4 @@
+from sklearn.linear_model import LinearRegression
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -8,7 +9,6 @@ from statsmodels.tsa.arima.model import ARIMA
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 import numpy as np
-from sklearn.linear_model import LinearRegression
 
 
 st.markdown("""
