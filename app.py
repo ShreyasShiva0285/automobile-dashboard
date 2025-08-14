@@ -275,12 +275,17 @@ with left_col_1:
         use_container_width=True
     )
 
-    # === ML Model for Gross Profit Prediction (ARIMA) ===
-    # === Check if 'GROSS_PROFIT' exists in monthly_summary ===
+   import pandas as pd
+import streamlit as st
+import numpy as np
+from statsmodels.tsa.arima.model import ARIMA
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+
+# === Check if 'GROSS_PROFIT' exists in monthly_summary ===
 if "GROSS_PROFIT" not in monthly_summary.columns:
     st.error("Missing 'GROSS_PROFIT' column in monthly summary")
-    # You can add logic to handle this if the column is missing
-    # For example, calculate it if SALES and RAW_MATERIAL_COST are available
+    # Calculate GROSS_PROFIT if SALES and RAW_MATERIAL_COST are available
     if "SALES" in monthly_summary.columns and "RAW_MATERIAL_COST" in monthly_summary.columns:
         monthly_summary["GROSS_PROFIT"] = monthly_summary["SALES"] - monthly_summary["RAW_MATERIAL_COST"]
     else:
@@ -317,67 +322,35 @@ else:
     st.markdown("**Gross Profit Prediction (ARIMA):** Not enough data to forecast.")
 
 
-    # --- Replace your current "ARIMA Prediction for Gross Profit" lines with this ---
+# === LSTM Model for Net Profit Prediction ===
+def lstm_forecast_profit(profit_data):
+    """Forecast the next month's net profit using LSTM."""
+    # Prepare the data for LSTM (we use past values to predict the next value)
+    X = np.array(profit_data.values[:-1]).reshape(-1, 1)
+    y = np.array(profit_data.values[1:])
+    X = X.reshape((X.shape[0], 1, X.shape[1]))  # Reshape for LSTM (samples, timesteps, features)
 
-# Check if 'GROSS_PROFIT' exists in monthly_summary
-if "GROSS_PROFIT" not in monthly_summary.columns:
-    st.error("Missing 'GROSS_PROFIT' column in monthly summary")
-    # You can add logic to handle this if the column is missing
-    # For example, calculate it if SALES and RAW_MATERIAL_COST are available
-    if "SALES" in monthly_summary.columns and "RAW_MATERIAL_COST" in monthly_summary.columns:
-        monthly_summary["GROSS_PROFIT"] = monthly_summary["SALES"] - monthly_summary["RAW_MATERIAL_COST"]
-    else:
-        st.error("Cannot calculate 'GROSS_PROFIT'. Missing necessary columns.")
-        st.stop()  # Stop execution if needed columns are missing
+    # Build LSTM model
+    model = Sequential()
+    model.add(LSTM(50, activation='relu', input_shape=(X.shape[1], X.shape[2])))
+    model.add(Dense(1))
+    model.compile(optimizer='adam', loss='mean_squared_error')
 
-# ARIMA Forecast Function
-def arima_forecast_profit(profit_series: pd.Series):
-    """Forecast the next month's gross profit using ARIMA."""
-    profit_series = pd.to_numeric(profit_series, errors="coerce").dropna()
-    if len(profit_series) < 3:  # ARIMA needs at least 3 data points
-        return None
-    # Fit the ARIMA model
-    model = ARIMA(profit_series, order=(1, 1, 1))
-    model_fit = model.fit()
-    forecast = model_fit.forecast(steps=1)
-    return float(forecast.iloc[0])  # Use .iloc to access by position
+    # Fit the model on the data
+    model.fit(X, y, epochs=200, batch_size=32, verbose=0)  # Set verbose=0 to avoid training logs
 
-# Now access the GROSS_PROFIT column
-next_month_gross_profit_arima = arima_forecast_profit(monthly_summary["GROSS_PROFIT"])
+    # Predict the next month's net profit using the last value from the data
+    prediction = model.predict(X[-1].reshape(1, 1, 1))  # Use the last data point for prediction
+    return prediction[0, 0]
 
-if next_month_gross_profit_arima is not None:
-    st.markdown(f"**Gross Profit Prediction (ARIMA):** £{next_month_gross_profit_arima:,.0f}")
-else:
-    st.markdown("**Gross Profit Prediction (ARIMA):** Not enough data to forecast.")
+# === Run LSTM Forecast on GROSS_PROFIT Column ===
+next_month_net_profit_lstm = lstm_forecast_profit(monthly_summary["GROSS_PROFIT"])
 
-    # === LSTM Model for Net Profit Prediction ===
-    def lstm_forecast_profit(profit_data):
-        X = np.array(profit_data.values[:-1]).reshape(-1, 1)
-        y = np.array(profit_data.values[1:])
-        X = X.reshape((X.shape[0], 1, X.shape[1]))
-
-        model = Sequential()
-        model.add(LSTM(50, activation='relu', input_shape=(X.shape[1], X.shape[2])))
-        model.add(Dense(1))
-        model.compile(optimizer='adam', loss='mean_squared_error')
-
-        model.fit(X, y, epochs=200, batch_size=32)
-        prediction = model.predict(X[-1].reshape(1, 1, 1))
-        return prediction[0, 0]
-
-    # LSTM Prediction for Net Profit (Next Month)
-    next_month_net_profit_lstm = lstm_forecast_profit(monthly_summary["NET_PROFIT"])
-
-    # === Display Predicted Values ===
-    st.markdown("#### 📊 Predicted Profit for Next Month")
-    
-    # Gross Profit Prediction (ARIMA)
-    st.markdown(f"**Gross Profit Prediction (ARIMA):** £{next_month_gross_profit_arima:,.0f}")
-    
-    # Net Profit Prediction (LSTM)
+# === Display LSTM Prediction Result ===
+if next_month_net_profit_lstm is not None:
     st.markdown(f"**Net Profit Prediction (LSTM):** £{next_month_net_profit_lstm:,.0f}")
-    
-    # --- Note: Optionally, you could create another chart for predicted vs actual profit comparison.
+else:
+    st.markdown("**Net Profit Prediction (LSTM):** Not enough data to forecast.")
 
 with right_col_1:
     st.markdown("#### 📦 Inventory & Fulfillment Summary")
