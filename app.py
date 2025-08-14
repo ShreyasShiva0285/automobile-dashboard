@@ -285,155 +285,191 @@ if "GROSS_PROFIT" not in monthly_summary.columns:
         st.error("Cannot calculate 'GROSS_PROFIT'. Missing necessary columns.")
         st.stop()  # Stop execution if needed columns are missing
 
-# === ARIMA Forecast Function for Gross Profit ===
+import pandas as pd
+import numpy as np
+import streamlit as st
+from statsmodels.tsa.arima.model import ARIMA
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+from sklearn.linear_model import LinearRegression
+import plotly.express as px
+
+# ARIMA Forecast for Gross Profit
 def arima_forecast_profit(profit_series: pd.Series):
     """Forecast the next month's gross profit using ARIMA."""
-    # Ensure the data is numeric and drop any NaN values
+    # Clean the data (ensure it's numeric and drop NaN values)
     profit_series = pd.to_numeric(profit_series, errors="coerce").dropna()
     
-    # If there are not enough data points (less than 3), return None
     if len(profit_series) < 3:
+        st.warning("Not enough data for ARIMA forecast.")
         return None
-    
-    # Fit the ARIMA model (order=(1,1,1) is a basic ARIMA model)
+
+    # ARIMA Model
     model = ARIMA(profit_series, order=(1, 1, 1))
     model_fit = model.fit()
     
-    # Forecast the next month's gross profit
     forecast = model_fit.forecast(steps=1)
     
-    # Return the first forecast value (next month's prediction)
-    return float(forecast[0])
-
-# === Run ARIMA Forecast on GROSS_PROFIT Column ===
-next_month_gross_profit_arima = arima_forecast_profit(monthly_summary["GROSS_PROFIT"])
-
-# === Display ARIMA Prediction Result ===
-if next_month_gross_profit_arima is not None:
-    st.markdown(f"**Gross Profit Prediction (ARIMA):** £{next_month_gross_profit_arima:,.0f}")
-else:
-    st.markdown("**Gross Profit Prediction (ARIMA):** Not enough data to forecast.")
+    # Debugging the forecast output
+    st.write(f"ARIMA forecast output: {forecast}")
+    
+    if len(forecast) > 0:
+        return float(forecast[0])
+    else:
+        st.error("ARIMA forecast returned an empty result.")
+        return None
 
 
-# === LSTM Model for Net Profit Prediction ===
+# LSTM Forecast for Gross Profit (Net Profit can also be handled similarly)
 def lstm_forecast_profit(profit_data):
     """Forecast the next month's net profit using LSTM."""
-    # Prepare the data for LSTM (we use past values to predict the next value)
+    # Clean the data (ensure it's numeric and drop NaN values)
+    profit_data = pd.to_numeric(profit_data, errors="coerce").dropna()
+
+    if len(profit_data) < 3:
+        st.warning("Not enough data for LSTM forecast.")
+        return None
+
+    # Prepare the data for LSTM (use past values to predict the next value)
     X = np.array(profit_data.values[:-1]).reshape(-1, 1)
     y = np.array(profit_data.values[1:])
     X = X.reshape((X.shape[0], 1, X.shape[1]))  # Reshape for LSTM (samples, timesteps, features)
 
-    # Build LSTM model
+    # Build and train the LSTM model
     model = Sequential()
     model.add(LSTM(50, activation='relu', input_shape=(X.shape[1], X.shape[2])))
     model.add(Dense(1))
     model.compile(optimizer='adam', loss='mean_squared_error')
 
-    # Fit the model on the data
-    model.fit(X, y, epochs=200, batch_size=32, verbose=0)  # Set verbose=0 to avoid training logs
+    model.fit(X, y, epochs=200, batch_size=32, verbose=0)
 
     # Predict the next month's net profit using the last value from the data
-    prediction = model.predict(X[-1].reshape(1, 1, 1))  # Use the last data point for prediction
+    prediction = model.predict(X[-1].reshape(1, 1, 1))
     return prediction[0, 0]
 
-# === Run LSTM Forecast on GROSS_PROFIT Column ===
-next_month_net_profit_lstm = lstm_forecast_profit(monthly_summary["GROSS_PROFIT"])
 
-# === Display LSTM Prediction Result ===
-if next_month_net_profit_lstm is not None:
-    st.markdown(f"**Net Profit Prediction (LSTM):** £{next_month_net_profit_lstm:,.0f}")
-else:
-    st.markdown("**Net Profit Prediction (LSTM):** Not enough data to forecast.")
+# Main Application
+def app():
+    # === ARIMA Forecast for Gross Profit ===
+    next_month_gross_profit_arima = arima_forecast_profit(monthly_summary["GROSS_PROFIT"])
 
-with right_col_1:
-    st.markdown("#### 📦 Inventory & Fulfillment Summary")
+    # === Display ARIMA Prediction Result ===
+    if next_month_gross_profit_arima is not None:
+        st.markdown(f"**Gross Profit Prediction (ARIMA):** £{next_month_gross_profit_arima:,.0f}")
+    else:
+        st.markdown("**Gross Profit Prediction (ARIMA):** Not enough data to forecast.")
+    
+    # === LSTM Model for Net Profit Prediction ===
+    next_month_net_profit_lstm = lstm_forecast_profit(monthly_summary["GROSS_PROFIT"])
 
-    stock_df = df[df["MONTH"].isin(last_3_months)].copy()
-    inventory_risk = stock_df.groupby("PRODUCTLINE")["SALES"].sum().sort_values().head(5).reset_index()
-    inventory_risk["Stock Risk"] = inventory_risk["SALES"].apply(lambda x: "⚠️ At Risk" if x < 10000 else "✅ Stable")
-    inventory_risk["Sales (£)"] = inventory_risk["SALES"].apply(lambda x: f"£{x:,.0f}")
+    # === Display LSTM Prediction Result ===
+    if next_month_net_profit_lstm is not None:
+        st.markdown(f"**Net Profit Prediction (LSTM):** £{next_month_net_profit_lstm:,.0f}")
+    else:
+        st.markdown("**Net Profit Prediction (LSTM):** Not enough data to forecast.")
 
-    st.markdown("##### ❌ Inventory Stock Risk (Last 3 Months)")
-    st.dataframe(
-        inventory_risk[["PRODUCTLINE", "Sales (£)", "Stock Risk"]].rename(columns={"PRODUCTLINE": "Product Line"}),
-        use_container_width=True
-    )
+    with right_col_1:
+        st.markdown("#### 📦 Inventory & Fulfillment Summary")
 
-    st.markdown("##### 🔮 Predicted Inventory Movement (Next Month)")
-    forecast_df = df[df["MONTH"].isin(last_3_months)]
-    forecast_summary = forecast_df.groupby("PRODUCTLINE")["QUANTITYORDERED"].mean().reset_index()
-    forecast_summary["Predicted Orders"] = forecast_summary["QUANTITYORDERED"].apply(lambda x: int(x))
+        # Inventory risk data
+        stock_df = df[df["MONTH"].isin(last_3_months)].copy()
+        inventory_risk = stock_df.groupby("PRODUCTLINE")["SALES"].sum().sort_values().head(5).reset_index()
+        inventory_risk["Stock Risk"] = inventory_risk["SALES"].apply(lambda x: "⚠️ At Risk" if x < 10000 else "✅ Stable")
+        inventory_risk["Sales (£)"] = inventory_risk["SALES"].apply(lambda x: f"£{x:,.0f}")
 
-    fig_inventory = px.bar(
-        forecast_summary.sort_values("Predicted Orders", ascending=False).head(5),
-        x="PRODUCTLINE",
-        y="Predicted Orders",
-        title="Next Month Forecast: Top 5 Product Lines (by Orders)",
-        text="Predicted Orders"
-    )
-    fig_inventory.update_traces(texttemplate='%{text}', hovertemplate='Product Line: %{x}<br>Orders: %{y}')
-    fig_inventory.update_layout(xaxis_title="Product Line", yaxis_title="Forecasted Orders")
-    st.plotly_chart(fig_inventory, use_container_width=True)
+        st.markdown("##### ❌ Inventory Stock Risk (Last 3 Months)")
+        st.dataframe(
+            inventory_risk[["PRODUCTLINE", "Sales (£)", "Stock Risk"]].rename(columns={"PRODUCTLINE": "Product Line"}),
+            use_container_width=True
+        )
 
-# 🔍 Insights Section
-st.markdown("### 🔍 Insights on Net Profit Walk")
-insights = [
-    "📈 Strong profit recovery in the final month suggests improved cost control or revenue boost.",
-    "💸 Mid-period dip likely due to elevated operating expenses or lower sales.",
-    "🧮 Consistent cash flow with actionable patterns for forecasting future months."
-]
-for point in insights:
-    st.markdown(f"- {point}")
+        st.markdown("##### 🔮 Predicted Inventory Movement (Next Month)")
+        forecast_df = df[df["MONTH"].isin(last_3_months)]
+        forecast_summary = forecast_df.groupby("PRODUCTLINE")["QUANTITYORDERED"].mean().reset_index()
+        forecast_summary["Predicted Orders"] = forecast_summary["QUANTITYORDERED"].apply(lambda x: int(x))
 
-insight_col1, insight_col2 = st.columns(2)
-recent_3_months = df[df["MONTH"].isin(last_3_months)].copy()
+        fig_inventory = px.bar(
+            forecast_summary.sort_values("Predicted Orders", ascending=False).head(5),
+            x="PRODUCTLINE",
+            y="Predicted Orders",
+            title="Next Month Forecast: Top 5 Product Lines (by Orders)",
+            text="Predicted Orders"
+        )
+        fig_inventory.update_traces(texttemplate='%{text}', hovertemplate='Product Line: %{x}<br>Orders: %{y}')
+        fig_inventory.update_layout(xaxis_title="Product Line", yaxis_title="Forecasted Orders")
+        st.plotly_chart(fig_inventory, use_container_width=True)
 
-with insight_col1:
-    st.markdown("#### ❌ Lowest-Selling Product Line & Clients")
-    lowest_line = recent_3_months.groupby("PRODUCTLINE")["SALES"].sum().sort_values().head(1).reset_index()
-    low_product_line = lowest_line.iloc[0]["PRODUCTLINE"]
-    low_customers = recent_3_months[recent_3_months["PRODUCTLINE"] == low_product_line].groupby("CUSTOMERNAME")["SALES"].sum().reset_index()
-    low_customers["Sales (£)"] = low_customers["SALES"].apply(lambda x: f"£{x:,.0f}")
-    st.write(f"📉 Lowest Product Line: **{low_product_line}**")
-    st.dataframe(low_customers[["CUSTOMERNAME", "Sales (£)"]].rename(columns={"CUSTOMERNAME": "Customer"}), use_container_width=True)
+    # === Insights Section ===
+    st.markdown("### 🔍 Insights on Net Profit Walk")
+    insights = [
+        "📈 Strong profit recovery in the final month suggests improved cost control or revenue boost.",
+        "💸 Mid-period dip likely due to elevated operating expenses or lower sales.",
+        "🧮 Consistent cash flow with actionable patterns for forecasting future months."
+    ]
+    for point in insights:
+        st.markdown(f"- {point}")
 
-with insight_col2:
-    st.markdown("#### 🔮 Forecast: Next Month Sales (Top Product Lines)")
-    top_3_productlines = df.groupby("PRODUCTLINE")["SALES"].sum().sort_values(ascending=False).head(3).reset_index()
-    forecasted_productline = df[df["PRODUCTLINE"].isin(top_3_productlines["PRODUCTLINE"])]
-    productline_forecast = forecasted_productline.groupby("PRODUCTLINE")["SALES"].mean().reset_index()
-    productline_forecast["Predicted Sales"] = productline_forecast["SALES"]
-    fig_forecast_pie = px.pie(
-        productline_forecast,
-        values="Predicted Sales",
-        names="PRODUCTLINE",
-        title="Next Month Forecast (Top 3 Product Lines)",
-        hole=0.3
-    )
-    fig_forecast_pie.update_traces(textinfo='percent+label', hovertemplate='Product Line: %{label}<br>£%{value:,.0f}')
-    st.plotly_chart(fig_forecast_pie, use_container_width=True)
+    insight_col1, insight_col2 = st.columns(2)
+    recent_3_months = df[df["MONTH"].isin(last_3_months)].copy()
 
-left_col_2, right_col_2 = st.columns(2)
+    with insight_col1:
+        st.markdown("#### ❌ Lowest-Selling Product Line & Clients")
+        lowest_line = recent_3_months.groupby("PRODUCTLINE")["SALES"].sum().sort_values().head(1).reset_index()
+        low_product_line = lowest_line.iloc[0]["PRODUCTLINE"]
+        low_customers = recent_3_months[recent_3_months["PRODUCTLINE"] == low_product_line].groupby("CUSTOMERNAME")["SALES"].sum().reset_index()
+        low_customers["Sales (£)"] = low_customers["SALES"].apply(lambda x: f"£{x:,.0f}")
+        st.write(f"📉 Lowest Product Line: **{low_product_line}**")
+        st.dataframe(low_customers[["CUSTOMERNAME", "Sales (£)"]].rename(columns={"CUSTOMERNAME": "Customer"}), use_container_width=True)
 
-# === Right Column for Cash Burn and Client Sales ===
-with right_col_2:
-    st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
+    with insight_col2:
+        st.markdown("#### 🔮 Forecast: Next Month Sales (Top Product Lines)")
+        top_3_productlines = df.groupby("PRODUCTLINE")["SALES"].sum().sort_values(ascending=False).head(3).reset_index()
+        forecasted_productline = df[df["PRODUCTLINE"].isin(top_3_productlines["PRODUCTLINE"])]
+        productline_forecast = forecasted_productline.groupby("PRODUCTLINE")["SALES"].mean().reset_index()
+        productline_forecast["Predicted Sales"] = productline_forecast["SALES"]
+        fig_forecast_pie = px.pie(
+            productline_forecast,
+            values="Predicted Sales",
+            names="PRODUCTLINE",
+            title="Next Month Forecast (Top 3 Product Lines)",
+            hole=0.3
+        )
+        fig_forecast_pie.update_traces(textinfo='percent+label', hovertemplate='Product Line: %{label}<br>£%{value:,.0f}')
+        st.plotly_chart(fig_forecast_pie, use_container_width=True)
 
-    if "PURCHASE_CATEGORY" in df.columns and "OPERATING_EXPENSES" in df.columns:
-        # Data Preprocessing for Cash Burn Analysis
-        recent_purchases = df[df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()]
-        recent_purchases = recent_purchases.rename(columns={"OPERATING_EXPENSES": "CASH_BURN"})
-        
-        # ML Model: Linear Regression for Predicting Future Cash Burn
-        def linear_regression_forecast(cash_burn_data):
-            X = np.array(range(len(cash_burn_data))).reshape(-1, 1)
-            y = np.array(cash_burn_data.values)
+    # === Right Column for Cash Burn and Client Sales ===
+    with right_col_2:
+        st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
 
-            model = LinearRegression()
-            model.fit(X, y)
-            future_month = np.array([[len(cash_burn_data)]])
-            forecast = model.predict(future_month)
-            return forecast[0]
+        if "PURCHASE_CATEGORY" in df.columns and "OPERATING_EXPENSES" in df.columns:
+            # Data Preprocessing for Cash Burn Analysis
+            recent_purchases = df[df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()]
+            recent_purchases = recent_purchases.rename(columns={"OPERATING_EXPENSES": "CASH_BURN"})
+
+            # ML Model: Linear Regression for Predicting Future Cash Burn
+            def linear_regression_forecast(cash_burn_data):
+                X = np.array(range(len(cash_burn_data))).reshape(-1, 1)
+                y = np.array(cash_burn_data.values)
+
+                model = LinearRegression()
+                model.fit(X, y)
+                future_month = np.array([[len(cash_burn_data)]])
+                forecast = model.predict(future_month)
+                return forecast[0]
+
+            # Forecast for Next Month's Cash Burn
+            forecast_cash_burn = linear_regression_forecast(recent_purchases["CASH_BURN"])
+
+            st.markdown(f"**Cash Burn Forecast for Next Month:** £{forecast_cash_burn:,.0f}")
+
+            # Display Cash Burn Visualization
+            fig_cash_burn = px.line(
+                recent_purchases, x="MONTH", y="CASH_BURN", title="Cash Burn (Last 3 Months)"
+            )
+            st.plotly_chart(fig_cash_burn, use_container_width=True)
+
+if __name__ == "__main__":
+    app()
 
         # Predict next month's cash burn for top 3 categories
         top_3_categories = (
