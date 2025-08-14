@@ -1,7 +1,24 @@
-streamlit>=1.18.0
-pandas>=1.5.3
-numpy>=1.23.0
-matplotlib>=3.7.1
-seaborn>=0.12.2
-plotly>=5.20
-fpdf
+# Data manipulation and analysis
+pandas==2.1.0            # DataFrame manipulation
+numpy==1.23.5            # Mathematical operations
+
+# Time Series Analysis
+statsmodels==0.13.5      # ARIMA and other time series models
+scikit-learn==1.2.2      # Machine learning tools
+
+# Web app framework
+streamlit==1.14.0        # If you're using Streamlit for the web app
+
+# Plotting libraries (if needed for visualization)
+matplotlib==3.7.1        # Plotting graphs
+seaborn==0.12.2          # Statistical data visualization
+
+# For working with data formats
+openpyxl==3.0.10         # Reading and writing Excel files
+requests==2.28.2         # HTTP requests (useful for APIs)
+
+# For handling errors and logging (optional but recommended)
+loguru==0.7.0            # Logging library
+
+# For deployment (if deploying with Streamlit Cloud or other platforms)
+gunicorn==20.1.0         # For web app deployment (if using Flask/Django as backend)
