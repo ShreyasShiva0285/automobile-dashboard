@@ -88,28 +88,57 @@ def lstm_forecast(monthly_rev):
 
 next_month_prediction_lstm = lstm_forecast(monthly_rev)
 
-# === PDF Generator ===
-def generate_pdf():
+# Function to generate the PDF report
+def generate_pdf(total_revenue, latest_month, latest_month_revenue, growth_rate, predicted_month_name, 
+                 next_month_prediction_arima, next_month_prediction_lstm, shipped, not_shipped):
+    
+    # Initialize the PDF
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
+    
+    # Add the title
     pdf.cell(200, 10, txt="KPI Summary Report", ln=True, align='C')
     pdf.ln(10)
+    
+    # Add the revenue and prediction details
     pdf.cell(200, 10, txt=f"Overall Revenue: £{total_revenue:,.0f}", ln=True)
     pdf.cell(200, 10, txt=f"Latest Month Revenue ({latest_month.strftime('%B')}): £{latest_month_revenue:,.0f}", ln=True)
     pdf.cell(200, 10, txt=f"3-Month Growth Rate: {growth_rate:.2f}%", ln=True)
     pdf.cell(200, 10, txt=f"Predicted Revenue ({predicted_month_name} - ARIMA): £{next_month_prediction_arima:,.0f}", ln=True)
     pdf.cell(200, 10, txt=f"Predicted Revenue ({predicted_month_name} - LSTM): £{next_month_prediction_lstm:,.0f}", ln=True)
-    # If 'shipped' is not a valid number (int or float), set it to 0
-if not isinstance(shipped, (int, float)):
-    shipped = 0  # Or some other default value you'd like
-
-# Now safely format and create the PDF cell
-pdf.cell(200, 10, txt=f"Orders Shipped: {shipped:,}", ln=True)
+    
+    # Check if 'shipped' is a valid number and default it if it's not
+    if not isinstance(shipped, (int, float)):
+        shipped = 0  # Default value if 'shipped' is not a valid number
+    
+    if not isinstance(not_shipped, (int, float)):
+        not_shipped = 0  # Default value if 'not_shipped' is not a valid number
+    
+    # Add the orders shipped and not shipped information to the PDF
+    pdf.cell(200, 10, txt=f"Orders Shipped: {shipped:,}", ln=True)
     pdf.cell(200, 10, txt=f"Orders Not Shipped: {not_shipped:,}", ln=True)
+    
+    # Output the PDF as a byte object
     return pdf.output(dest='S').encode('latin-1')
 
-pdf_bytes = generate_pdf()
+# Example of calling the function with sample data
+total_revenue = 1000000
+latest_month = datetime(2025, 7, 1)  # Example month
+latest_month_revenue = 120000
+growth_rate = 5.2  # Example growth rate
+predicted_month_name = 'August'
+next_month_prediction_arima = 125000
+next_month_prediction_lstm = 130000
+shipped = 80000  # Example number of orders shipped
+not_shipped = 20000  # Example number of orders not shipped
+
+# Generate the PDF
+pdf_bytes = generate_pdf(total_revenue, latest_month, latest_month_revenue, growth_rate, 
+                         predicted_month_name, next_month_prediction_arima, next_month_prediction_lstm, 
+                         shipped, not_shipped)
+
+# You can now use pdf_bytes for further processing (e.g., saving or sending the PDF)
 
 # === Header ===
 st.markdown(f"""
