@@ -8,6 +8,8 @@ from statsmodels.tsa.arima.model import ARIMA
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 import numpy as np
+from sklearn.linear_model import LinearRegression
+
 
 st.markdown("""
     <style>
@@ -443,31 +445,31 @@ with right_col_2:
             columns={"OPERATING_EXPENSES": "CASH_BURN"}
         )
 
-        # ML Model: Linear Regression for Predicting Future Cash Burn
-        def linear_regression_forecast(cash_burn_data):
-            X = np.array(range(len(cash_burn_data))).reshape(-1, 1)
-            y = np.array(cash_burn_data.values)
+from sklearn.linear_model import LinearRegression  # <-- Make sure this is included
 
-            model = LinearRegression()
-            model.fit(X, y)
-            future_month = np.array([[len(cash_burn_data)]])
-            forecast = model.predict(future_month)
-            return forecast[0]
+# ML Model: Linear Regression for Predicting Future Cash Burn
+def linear_regression_forecast(cash_burn_data):
+    X = np.array(range(len(cash_burn_data))).reshape(-1, 1)
+    y = np.array(cash_burn_data.values)
 
-        # Forecast for Next Month's Cash Burn
-        forecast_cash_burn = linear_regression_forecast(recent_purchases["CASH_BURN"])
-        st.markdown(
-            f"**Cash Burn Forecast for Next Month:** £{forecast_cash_burn:,.0f}"
-        )
+    model = LinearRegression()
+    model.fit(X, y)
+    future_month = np.array([[len(cash_burn_data)]])
+    forecast = model.predict(future_month)
+    return forecast[0]
 
-        # Display Cash Burn Visualization
-        fig_cash_burn = px.line(
-            recent_purchases,
-            x="MONTH",
-            y="CASH_BURN",
-            title="Cash Burn (Last 3 Months)",
-        )
-        st.plotly_chart(fig_cash_burn, use_container_width=True)
+# Forecast for Next Month's Cash Burn
+forecast_cash_burn = linear_regression_forecast(recent_purchases["CASH_BURN"])
+st.markdown(f"**Cash Burn Forecast for Next Month:** £{forecast_cash_burn:,.0f}")
+
+# Display Cash Burn Visualization
+fig_cash_burn = px.line(
+    recent_purchases,
+    x="MONTH",
+    y="CASH_BURN",
+    title="Cash Burn (Last 3 Months)",
+)
+st.plotly_chart(fig_cash_burn, use_container_width=True)
 
         # Predict next month's cash burn for top 3 categories
         top_3_categories = (
