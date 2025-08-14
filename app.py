@@ -468,9 +468,6 @@ def app():
             )
             st.plotly_chart(fig_cash_burn, use_container_width=True)
 
-if __name__ == "__main__":
-    app()
-
         # Predict next month's cash burn for top 3 categories
         top_3_categories = (
             recent_purchases.groupby("PURCHASE_CATEGORY")["CASH_BURN"]
