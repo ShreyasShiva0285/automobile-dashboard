@@ -285,15 +285,6 @@ if "GROSS_PROFIT" not in monthly_summary.columns:
         st.error("Cannot calculate 'GROSS_PROFIT'. Missing necessary columns.")
         st.stop()  # Stop execution if needed columns are missing
 
-import pandas as pd
-import numpy as np
-import streamlit as st
-from statsmodels.tsa.arima.model import ARIMA
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
-from sklearn.linear_model import LinearRegression
-import plotly.express as px
-
 # ARIMA Forecast for Gross Profit
 def arima_forecast_profit(profit_series: pd.Series):
     """Forecast the next month's gross profit using ARIMA."""
