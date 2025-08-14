@@ -275,13 +275,6 @@ with left_col_1:
         use_container_width=True
     )
 
-   import pandas as pd
-import streamlit as st
-import numpy as np
-from statsmodels.tsa.arima.model import ARIMA
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
-
 # === Check if 'GROSS_PROFIT' exists in monthly_summary ===
 if "GROSS_PROFIT" not in monthly_summary.columns:
     st.error("Missing 'GROSS_PROFIT' column in monthly summary")
