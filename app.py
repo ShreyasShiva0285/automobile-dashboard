@@ -464,31 +464,28 @@ st.markdown(f"**Cash Burn Forecast for Next Month:** £{forecast_cash_burn:,.0f}
 fig_cash_burn = px.line(recent_purchases, x="MONTH", y="CASH_BURN", title="Cash Burn (Last 3 Months)")
 st.plotly_chart(fig_cash_burn, use_container_width=True)
 
-        # Predict next month's cash burn for top 3 categories
-        top_3_categories = (
-            recent_purchases.groupby("PURCHASE_CATEGORY")["CASH_BURN"]
-            .sum()
-            .sort_values(ascending=False)
-            .head(3)
-            .reset_index()
-        )
+# Predict next month's cash burn for top 3 categories
+top_3_categories = (
+    recent_purchases.groupby("PURCHASE_CATEGORY")["CASH_BURN"]
+    .sum()
+    .sort_values(ascending=False)
+    .head(3)
+    .reset_index()
+)
 
-        for category in top_3_categories["PURCHASE_CATEGORY"]:
-            category_data = recent_purchases[
-                recent_purchases["PURCHASE_CATEGORY"] == category
-            ]
-            next_month_cash_burn = linear_regression_forecast(
-                category_data["CASH_BURN"]
-            )
-            top_3_categories.loc[
-                top_3_categories["PURCHASE_CATEGORY"] == category,
-                "Next Month Prediction (£)",
-            ] = f"£{next_month_cash_burn:,.0f}"
+# Predict Cash Burn for the Next Month (Linear Regression)
+for category in top_3_categories["PURCHASE_CATEGORY"]:
+    category_data = recent_purchases[recent_purchases["PURCHASE_CATEGORY"] == category]
+    next_month_cash_burn = linear_regression_forecast(category_data["CASH_BURN"])
+    top_3_categories.loc[top_3_categories["PURCHASE_CATEGORY"] == category, "Next Month Prediction (£)"] = f"£{next_month_cash_burn:,.0f}"
 
-        # Show Top 3 Categories with Predicted Cash Burn for Next Month
-        top_3_categories["Total (£)"] = top_3_categories["CASH_BURN"].apply(
-            lambda x: f"£{x:,.0f}"
-        )
+# Show Top 3 Categories with Predicted Cash Burn for Next Month
+top_3_categories["Total (£)"] = top_3_categories["CASH_BURN"].apply(lambda x: f"£{x:,.0f}")
+top_3_categories["Predicted Next Month (£)"] = top_3_categories["Next Month Prediction (£)"]
+st.dataframe(
+    top_3_categories[["PURCHASE_CATEGORY", "Total (£)", "Predicted Next Month (£)"]].rename(columns={"PURCHASE_CATEGORY": "Category"}),
+    use_container_width=True
+)
         top_3_categories["Predicted Next Month (£)"] = top_3_categories[
             "Next Month Prediction (£)"
         ]
