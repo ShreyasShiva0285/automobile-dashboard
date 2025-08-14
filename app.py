@@ -4,6 +4,10 @@ import plotly.express as px
 from datetime import datetime
 from fpdf import FPDF
 import plotly.graph_objects as go
+from statsmodels.tsa.arima.model import ARIMA
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+import numpy as np
 
 st.markdown("""
     <style>
@@ -49,12 +53,40 @@ rev_last_3 = df[df["MONTH"].isin(last_3_months)].groupby("MONTH")["SALES"].sum()
 growth_rate = ((rev_last_3.iloc[-1] - rev_last_3.iloc[0]) / rev_last_3.iloc[0]) * 100 if len(rev_last_3) == 3 else 0
 
 monthly_rev = df.groupby(df["ORDERDATE"].dt.to_period("M"))["SALES"].sum()
-next_month_prediction = monthly_rev.mean()
+
+# === ARIMA Model for Forecasting ===
+def arima_forecast(monthly_rev):
+    model = ARIMA(monthly_rev, order=(1,1,1))
+    model_fit = model.fit()
+    forecast = model_fit.forecast(steps=1)
+    return forecast[0]
+
+next_month_prediction_arima = arima_forecast(monthly_rev)
 predicted_month_name = (latest_month.to_timestamp() + pd.DateOffset(months=1)).strftime('%B')
 
-status_counts = df["STATUS"].value_counts()
-shipped = status_counts.get("Shipped", 0)
-not_shipped = status_counts.sum() - shipped
+# === LSTM Model for Forecasting ===
+def lstm_forecast(monthly_rev):
+    # Preparing the data for LSTM model
+    X = np.array(monthly_rev.values[:-1]).reshape(-1, 1)
+    y = np.array(monthly_rev.values[1:])
+
+    # Reshaping for LSTM input (samples, time steps, features)
+    X = X.reshape((X.shape[0], 1, X.shape[1]))
+
+    # Build the LSTM model
+    model = Sequential()
+    model.add(LSTM(50, activation='relu', input_shape=(X.shape[1], X.shape[2])))
+    model.add(Dense(1))
+    model.compile(optimizer='adam', loss='mean_squared_error')
+
+    # Fit the model
+    model.fit(X, y, epochs=200, batch_size=32)
+
+    # Predict the next month
+    prediction = model.predict(X[-1].reshape(1, 1, 1))
+    return prediction[0, 0]
+
+next_month_prediction_lstm = lstm_forecast(monthly_rev)
 
 # === PDF Generator ===
 def generate_pdf():
@@ -66,7 +98,8 @@ def generate_pdf():
     pdf.cell(200, 10, txt=f"Overall Revenue: £{total_revenue:,.0f}", ln=True)
     pdf.cell(200, 10, txt=f"Latest Month Revenue ({latest_month.strftime('%B')}): £{latest_month_revenue:,.0f}", ln=True)
     pdf.cell(200, 10, txt=f"3-Month Growth Rate: {growth_rate:.2f}%", ln=True)
-    pdf.cell(200, 10, txt=f"Predicted Revenue ({predicted_month_name}): £{next_month_prediction:,.0f}", ln=True)
+    pdf.cell(200, 10, txt=f"Predicted Revenue ({predicted_month_name} - ARIMA): £{next_month_prediction_arima:,.0f}", ln=True)
+    pdf.cell(200, 10, txt=f"Predicted Revenue ({predicted_month_name} - LSTM): £{next_month_prediction_lstm:,.0f}", ln=True)
     pdf.cell(200, 10, txt=f"Orders Shipped: {shipped:,}", ln=True)
     pdf.cell(200, 10, txt=f"Orders Not Shipped: {not_shipped:,}", ln=True)
     return pdf.output(dest='S').encode('latin-1')
@@ -99,19 +132,30 @@ with top_cols[2]:
 
 bottom_cols = st.columns(3)
 
-# 🔮 Predicted Revenue
+# 🔮 Predicted Revenue (ARIMA)
 with bottom_cols[0]:
     st.markdown(f"""
     <div style='{box_wrapper}'>
         <div style='{box_style}'>
-            <h5>🔮 Predicted Revenue ({predicted_month_name})</h5>
-            <h3>£{next_month_prediction:,.0f}</h3>
+            <h5>🔮 Predicted Revenue ({predicted_month_name} - ARIMA)</h5>
+            <h3>£{next_month_prediction_arima:,.0f}</h3>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# 🔮 Predicted Revenue (LSTM)
+with bottom_cols[1]:
+    st.markdown(f"""
+    <div style='{box_wrapper}'>
+        <div style='{box_style}'>
+            <h5>🔮 Predicted Revenue ({predicted_month_name} - LSTM)</h5>
+            <h3>£{next_month_prediction_lstm:,.0f}</h3>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 # 📦 Orders Status + Accuracy
-with bottom_cols[1]:
+with bottom_cols[2]:
     combined_orders_html = f"""
     <div style='{box_wrapper}'>
         <div style='{box_style}'>
@@ -143,11 +187,7 @@ with bottom_cols[2]:
     </div>
     """, unsafe_allow_html=True)
 
-# ✅ FIX: Define columns before using
-# === Left & Right Columns for Profit Analysis and Inventory ===
-left_col_1, right_col_1 = st.columns(2)
-
-# Left and Right Columns for Profit and Inventory
+# === Left Column for Profit and Inventory ===
 left_col_1, right_col_1 = st.columns(2)
 
 with left_col_1:
@@ -196,6 +236,45 @@ with left_col_1:
         monthly_summary[["MONTH", "Sales (£)", "Gross Profit (£)", "Net Profit (£)"]].rename(columns={"MONTH": "Month"}),
         use_container_width=True
     )
+
+    # === ML Model for Gross Profit Prediction (ARIMA) ===
+    def arima_forecast_profit(profit_data):
+        model = ARIMA(profit_data, order=(1, 1, 1))
+        model_fit = model.fit()
+        forecast = model_fit.forecast(steps=1)
+        return forecast[0]
+
+    # ARIMA Prediction for Gross Profit (Next Month)
+    next_month_gross_profit_arima = arima_forecast_profit(monthly_summary["GROSS_PROFIT"])
+
+    # === LSTM Model for Net Profit Prediction ===
+    def lstm_forecast_profit(profit_data):
+        X = np.array(profit_data.values[:-1]).reshape(-1, 1)
+        y = np.array(profit_data.values[1:])
+        X = X.reshape((X.shape[0], 1, X.shape[1]))
+
+        model = Sequential()
+        model.add(LSTM(50, activation='relu', input_shape=(X.shape[1], X.shape[2])))
+        model.add(Dense(1))
+        model.compile(optimizer='adam', loss='mean_squared_error')
+
+        model.fit(X, y, epochs=200, batch_size=32)
+        prediction = model.predict(X[-1].reshape(1, 1, 1))
+        return prediction[0, 0]
+
+    # LSTM Prediction for Net Profit (Next Month)
+    next_month_net_profit_lstm = lstm_forecast_profit(monthly_summary["NET_PROFIT"])
+
+    # === Display Predicted Values ===
+    st.markdown("#### 📊 Predicted Profit for Next Month")
+    
+    # Gross Profit Prediction (ARIMA)
+    st.markdown(f"**Gross Profit Prediction (ARIMA):** £{next_month_gross_profit_arima:,.0f}")
+    
+    # Net Profit Prediction (LSTM)
+    st.markdown(f"**Net Profit Prediction (LSTM):** £{next_month_net_profit_lstm:,.0f}")
+    
+    # --- Note: Optionally, you could create another chart for predicted vs actual profit comparison.
 
 with right_col_1:
     st.markdown("#### 📦 Inventory & Fulfillment Summary")
@@ -267,12 +346,27 @@ with insight_col2:
 
 left_col_2, right_col_2 = st.columns(2)
 
+# === Right Column for Cash Burn and Client Sales ===
 with right_col_2:
     st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
+
     if "PURCHASE_CATEGORY" in df.columns and "OPERATING_EXPENSES" in df.columns:
+        # Data Preprocessing for Cash Burn Analysis
         recent_purchases = df[df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()]
         recent_purchases = recent_purchases.rename(columns={"OPERATING_EXPENSES": "CASH_BURN"})
+        
+        # ML Model: Linear Regression for Predicting Future Cash Burn
+        def linear_regression_forecast(cash_burn_data):
+            X = np.array(range(len(cash_burn_data))).reshape(-1, 1)
+            y = np.array(cash_burn_data.values)
 
+            model = LinearRegression()
+            model.fit(X, y)
+            future_month = np.array([[len(cash_burn_data)]])
+            forecast = model.predict(future_month)
+            return forecast[0]
+
+        # Predict next month's cash burn for top 3 categories
         top_3_categories = (
             recent_purchases.groupby("PURCHASE_CATEGORY")["CASH_BURN"]
             .sum()
@@ -280,12 +374,22 @@ with right_col_2:
             .head(3)
             .reset_index()
         )
+        
+        # Predict Cash Burn for the Next Month (Linear Regression)
+        for category in top_3_categories["PURCHASE_CATEGORY"]:
+            category_data = recent_purchases[recent_purchases["PURCHASE_CATEGORY"] == category]
+            next_month_cash_burn = linear_regression_forecast(category_data["CASH_BURN"])
+            top_3_categories.loc[top_3_categories["PURCHASE_CATEGORY"] == category, "Next Month Prediction (£)"] = f"£{next_month_cash_burn:,.0f}"
+
+        # Show Top 3 Categories with Predicted Cash Burn for Next Month
         top_3_categories["Total (£)"] = top_3_categories["CASH_BURN"].apply(lambda x: f"£{x:,.0f}")
+        top_3_categories["Predicted Next Month (£)"] = top_3_categories["Next Month Prediction (£)"]
         st.dataframe(
-            top_3_categories[["PURCHASE_CATEGORY", "Total (£)"]].rename(columns={"PURCHASE_CATEGORY": "Category"}),
+            top_3_categories[["PURCHASE_CATEGORY", "Total (£)", "Predicted Next Month (£)"]].rename(columns={"PURCHASE_CATEGORY": "Category"}),
             use_container_width=True
         )
 
+        # Cash Burn Trend (Bar Chart)
         burn_trend = (
             recent_purchases.groupby(["MONTH", "PURCHASE_CATEGORY"])["CASH_BURN"]
             .sum()
@@ -309,11 +413,14 @@ with right_col_2:
             hovertemplate='Month: %{x}<br>Category: %{legendgroup}<br>Expense: £%{y:,.0f}'
         )
         st.plotly_chart(fig, use_container_width=True)
+
     else:
         st.warning("PURCHASE_CATEGORY or OPERATING_EXPENSES column not found in data.")
 
-with left_col_2:
-    st.markdown("#### 🧑‍💼 Top 5 Clients (By Sales)")
+    # === Deep Learning for Sales Prediction (Top Clients) ===
+    st.markdown("#### 🧑‍💼 Top 5 Clients (Sales Performance Prediction)")
+
+    # Prepare Data for LSTM Model (Top Clients)
     top_clients = (
         df.groupby(["CUSTOMERNAME", "COUNTRY"])["SALES"]
         .sum()
@@ -321,14 +428,35 @@ with left_col_2:
         .head(5)
         .reset_index()
     )
-    top_clients["Total Sales (£)"] = top_clients["SALES"].apply(lambda x: f"£{x:,.0f}")
+
+    # LSTM Sales Prediction Model
+    def lstm_sales_forecast(sales_data):
+        # Prepare data for LSTM
+        X = np.array(sales_data.values[:-1]).reshape(-1, 1)
+        y = np.array(sales_data.values[1:])
+        X = X.reshape((X.shape[0], 1, X.shape[1]))
+
+        model = Sequential()
+        model.add(LSTM(50, activation='relu', input_shape=(X.shape[1], X.shape[2])))
+        model.add(Dense(1))
+        model.compile(optimizer='adam', loss='mean_squared_error')
+
+        model.fit(X, y, epochs=200, batch_size=32)
+        prediction = model.predict(X[-1].reshape(1, 1, 1))
+        return prediction[0, 0]
+
+    # Predict Sales for Top Clients (Next Month)
+    top_clients["Predicted Sales (£)"] = top_clients["SALES"].apply(lambda x: f"£{lstm_sales_forecast(pd.Series([x])):,.0f}")
+    
+    # Show Sales Prediction for Top 5 Clients
     st.dataframe(
-        top_clients[["CUSTOMERNAME", "COUNTRY", "Total Sales (£)"]]
-        .rename(columns={"CUSTOMERNAME": "Client", "COUNTRY": "Country"}),
+        top_clients[["CUSTOMERNAME", "COUNTRY", "Total Sales (£)", "Predicted Sales (£)"]].rename(columns={"CUSTOMERNAME": "Client", "COUNTRY": "Country"}),
         use_container_width=True
     )
 
     st.markdown("#### 📊 Top 5 Clients: Sales Performance")
+
+    # Visualize the Sales Performance for Top 5 Clients
     fig = px.bar(
         top_clients,
         x="CUSTOMERNAME",
