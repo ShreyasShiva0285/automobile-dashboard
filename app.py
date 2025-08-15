@@ -462,6 +462,7 @@ st.markdown(f"**Cash Burn Forecast for Next Month:** £{forecast_cash_burn:,.0f}
 
 # Display Cash Burn Visualization
 recent_purchases["MONTH"] = recent_purchases["MONTH"].astype(str)
+recent_purchases["CASH_BURN"] = pd.to_numeric(recent_purchases["CASH_BURN"], errors="coerce")
 fig_cash_burn = px.line(recent_purchases, x="MONTH", y="CASH_BURN", title="Cash Burn (Last 3 Months)")
 st.plotly_chart(fig_cash_burn, use_container_width=True)
 
@@ -516,6 +517,7 @@ if "PURCHASE_CATEGORY" in df.columns and "OPERATING_EXPENSES" in df.columns:
 
     # Display Cash Burn Visualization
     recent_purchases["MONTH"] = recent_purchases["MONTH"].astype(str)
+    recent_purchases["CASH_BURN"] = pd.to_numeric(recent_purchases["CASH_BURN"], errors="coerce")
     fig_cash_burn = px.line(recent_purchases, x="MONTH", y="CASH_BURN", title="Cash Burn (Last 3 Months)")
     st.plotly_chart(fig_cash_burn, use_container_width=True)
 
@@ -548,7 +550,7 @@ if "PURCHASE_CATEGORY" in df.columns and "OPERATING_EXPENSES" in df.columns:
         .sum()
         .reset_index()
     )
-    burn_trend["MONTH"] = burn_trend["MONTH"].apply(lambda x: str(x))
+    burn_trend["MONTH"] = burn_trend["MONTH"].astype(str)
 
     fig = px.bar(
         burn_trend[burn_trend["PURCHASE_CATEGORY"].isin(top_3_categories["PURCHASE_CATEGORY"])],
