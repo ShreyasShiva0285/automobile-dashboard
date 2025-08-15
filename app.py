@@ -489,89 +489,78 @@ st.dataframe(
     use_container_width=True
 )
 
-# Cash Burn Trend (Bar Chart)
-burn_trend = (
-    recent_purchases.groupby(["MONTH", "PURCHASE_CATEGORY"])["CASH_BURN"]
-    .sum()
-    .reset_index()
-)
-burn_trend["MONTH"] = burn_trend["MONTH"].astype(str)
+# 💸 Cash Burn Analysis
+st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
 
-fig = px.bar(
-    burn_trend[burn_trend["PURCHASE_CATEGORY"].isin(top_3_categories["PURCHASE_CATEGORY"])],
-    x="MONTH",
-    y="CASH_BURN",
-    color="PURCHASE_CATEGORY",
-    barmode="group",
-    title="📊 Monthly Cash Burn by Category (Top 3)",
-    labels={"CASH_BURN": "Expense (£)", "MONTH": "Month"},
-    text_auto=".2s",
-)
-fig.update_layout(yaxis_title="Expense (£)", xaxis_title="Month")
-fig.update_traces(
-    texttemplate="£%{y:,.0f}",
-    hovertemplate="Month: %{x}<br>Category: %{legendgroup}<br>Expense: £%{y:,.0f}",
-)
-st.plotly_chart(fig, use_container_width=True)
+if "PURCHASE_CATEGORY" in df.columns and "OPERATING_EXPENSES" in df.columns:
+    # Data Preprocessing for Cash Burn Analysis
+    recent_purchases = df[
+        df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()
+    ].copy()
+    recent_purchases = recent_purchases.rename(columns={"OPERATING_EXPENSES": "CASH_BURN"})
+
+    # ML Model: Linear Regression for Predicting Future Cash Burn
+    def linear_regression_forecast(cash_burn_data):
+        X = np.array(range(len(cash_burn_data))).reshape(-1, 1)
+        y = np.array(cash_burn_data.values)
+        model = LinearRegression()
+        model.fit(X, y)
+        future_month = np.array([[len(cash_burn_data)]])  # Predict next month
+        forecast = model.predict(future_month)
+        return forecast[0]
+
+    # Forecast for Next Month's Cash Burn
+    forecast_cash_burn = linear_regression_forecast(recent_purchases["CASH_BURN"])
+    st.markdown(f"**Cash Burn Forecast for Next Month:** £{forecast_cash_burn:,.0f}")
+
+    # Display Cash Burn Visualization
+    fig_cash_burn = px.line(recent_purchases, x="MONTH", y="CASH_BURN", title="Cash Burn (Last 3 Months)")
+    st.plotly_chart(fig_cash_burn, use_container_width=True)
+
+    # Predict next month's cash burn for top 3 categories
+    top_3_categories = (
+        recent_purchases.groupby("PURCHASE_CATEGORY")["CASH_BURN"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(3)
+        .reset_index()
+    )
+
+    for category in top_3_categories["PURCHASE_CATEGORY"]:
+        category_data = recent_purchases[recent_purchases["PURCHASE_CATEGORY"] == category]
+        next_month_cash_burn = linear_regression_forecast(category_data["CASH_BURN"])
+        top_3_categories.loc[
+            top_3_categories["PURCHASE_CATEGORY"] == category, "Next Month Prediction (£)"
+        ] = f"£{next_month_cash_burn:,.0f}"
+
+    top_3_categories["Total (£)"] = top_3_categories["CASH_BURN"].apply(lambda x: f"£{x:,.0f}")
+    st.dataframe(
+        top_3_categories[["PURCHASE_CATEGORY", "Total (£)", "Next Month Prediction (£)"]]
+        .rename(columns={"PURCHASE_CATEGORY": "Category"}),
+        use_container_width=True
+    )
+
+    # Bar chart for Cash Burn Trend
+    burn_trend = (
+        recent_purchases.groupby(["MONTH", "PURCHASE_CATEGORY"])["CASH_BURN"]
+        .sum()
+        .reset_index()
+    )
+    burn_trend["MONTH"] = burn_trend["MONTH"].astype(str)
+
+    fig = px.bar(
+        burn_trend[burn_trend["PURCHASE_CATEGORY"].isin(top_3_categories["Category"])],
+        x="MONTH",
+        y="CASH_BURN",
+        color="PURCHASE_CATEGORY",
+        barmode="group",
+        title="📊 Monthly Cash Burn by Category (Top 3)"
+    )
+    fig.update_traces(texttemplate="£%{y:,.0f}")
+    st.plotly_chart(fig, use_container_width=True)
 
 else:
     st.warning("PURCHASE_CATEGORY or OPERATING_EXPENSES column not found in data.")
-
-# === Deep Learning for Sales Prediction (Top Clients) ===
-st.markdown("#### 🧑‍💼 Top 5 Clients (Sales Performance Prediction)")
-
-# Prepare Data for LSTM Model (Top Clients)
-top_clients = (
-    df.groupby(["CUSTOMERNAME", "COUNTRY"])["SALES"]
-    .sum()
-    .sort_values(ascending=False)
-    .head(5)
-    .reset_index()
-)
-
-# LSTM Sales Prediction Model
-def lstm_sales_forecast(sales_data):
-    # Prepare data for LSTM
-    X = np.array(sales_data.values[:-1]).reshape(-1, 1)
-    y = np.array(sales_data.values[1:])
-    X = X.reshape((X.shape[0], 1, X.shape[1]))
-
-    model = Sequential()
-    model.add(LSTM(50, activation='relu', input_shape=(X.shape[1], X.shape[2])))
-    model.add(Dense(1))
-    model.compile(optimizer='adam', loss='mean_squared_error')
-
-    model.fit(X, y, epochs=200, batch_size=32)
-    prediction = model.predict(X[-1].reshape(1, 1, 1))
-    return prediction[0, 0]
-
-# Predict Sales for Top Clients (Next Month)
-top_clients["Predicted Sales (£)"] = top_clients["SALES"].apply(lambda x: f"£{lstm_sales_forecast(pd.Series([x])):,.0f}")
-
-# Show Sales Prediction for Top 5 Clients
-st.dataframe(
-    top_clients[["CUSTOMERNAME", "COUNTRY", "SALES", "Predicted Sales (£)"]]
-    .rename(columns={"CUSTOMERNAME": "Client", "COUNTRY": "Country"}),
-    use_container_width=True
-)
-
-st.markdown("#### 📊 Top 5 Clients: Sales Performance")
-
-# Visualize the Sales Performance for Top 5 Clients
-fig = px.bar(
-    top_clients,
-    x="CUSTOMERNAME",
-    y="SALES",
-    color="COUNTRY",
-    title="Sales Performance of Top 5 Clients",
-    text="SALES"
-)
-fig.update_traces(
-    hovertemplate='Client: %{x}<br>Sales: £%{y:,.0f}',
-    texttemplate='£%{y:,.0f}'
-)
-fig.update_layout(xaxis_title="Client", yaxis_title="Sales (£)")
-st.plotly_chart(fig, use_container_width=True)
 
 # === Export Option ===
 st.markdown("### 📁 Export Raw Data")
