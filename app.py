@@ -440,7 +440,7 @@ with right_col_2:
         # Data Preprocessing for Cash Burn Analysis
         recent_purchases = df[
             df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()
-        ]
+        ].copy()
         recent_purchases = recent_purchases.rename(
             columns={"OPERATING_EXPENSES": "CASH_BURN"}
         )
@@ -461,7 +461,7 @@ forecast_cash_burn = linear_regression_forecast(recent_purchases["CASH_BURN"])
 st.markdown(f"**Cash Burn Forecast for Next Month:** £{forecast_cash_burn:,.0f}")
 
 # Display Cash Burn Visualization
-fig_cash_burn["MONTH"] = fig_cash_burn["MONTH"].apply(lambda x: str(x))
+recent_purchases["MONTH"] = recent_purchases["MONTH"].astype(str)
 fig_cash_burn = px.line(recent_purchases, x="MONTH", y="CASH_BURN", title="Cash Burn (Last 3 Months)")
 st.plotly_chart(fig_cash_burn, use_container_width=True)
 
@@ -515,8 +515,8 @@ if "PURCHASE_CATEGORY" in df.columns and "OPERATING_EXPENSES" in df.columns:
     st.markdown(f"**Cash Burn Forecast for Next Month:** £{forecast_cash_burn:,.0f}")
 
     # Display Cash Burn Visualization
-    fig_cash_burn["MONTH"] = fig_cash_burn["MONTH"].apply(lambda x: str(x))
-fig_cash_burn = px.line(recent_purchases, x="MONTH", y="CASH_BURN", title="Cash Burn (Last 3 Months)")
+    recent_purchases["MONTH"] = recent_purchases["MONTH"].astype(str)
+    fig_cash_burn = px.line(recent_purchases, x="MONTH", y="CASH_BURN", title="Cash Burn (Last 3 Months)")
     st.plotly_chart(fig_cash_burn, use_container_width=True)
 
     # Predict next month's cash burn for top 3 categories
@@ -551,7 +551,7 @@ fig_cash_burn = px.line(recent_purchases, x="MONTH", y="CASH_BURN", title="Cash 
     burn_trend["MONTH"] = burn_trend["MONTH"].apply(lambda x: str(x))
 
     fig = px.bar(
-        burn_trend[burn_trend["PURCHASE_CATEGORY"].isin(top_3_categories["Category"])],
+        burn_trend[burn_trend["PURCHASE_CATEGORY"].isin(top_3_categories["PURCHASE_CATEGORY"])],
         x="MONTH",
         y="CASH_BURN",
         color="PURCHASE_CATEGORY",
