@@ -246,7 +246,7 @@ with left_col_1:
     }).reset_index()
 
     # Waterfall Chart
-    x_vals = monthly_summary["MONTH"].astype(str).tolist()
+    x_vals = monthly_summary["MONTH"].apply(lambda x: str(x)).tolist()
     y_vals = monthly_summary["NET_PROFIT"].tolist()
 
     st.markdown("#### 📉 Net Profit Walk (Last 3 Months)")
@@ -432,88 +432,137 @@ def app():
 
 left_col_2, right_col_2 = st.columns(2)
 
-# === Right Column for Cash Burn and Client Sales ===
+   # === Right Column for Cash Burn and Client Sales ===
 with right_col_2:
     st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
 
     if "PURCHASE_CATEGORY" in df.columns and "OPERATING_EXPENSES" in df.columns:
-        # Data Preprocessing
+        # Data Preprocessing for Cash Burn Analysis
         recent_purchases = df[
             df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()
-        ].copy()
-        recent_purchases = recent_purchases.rename(columns={"OPERATING_EXPENSES": "CASH_BURN"})
-
-        # ✅ Ensure MONTH is string
-        recent_purchases["MONTH"] = recent_purchases["MONTH"].astype(str)
-
-        # ML Model: Linear Regression for Predicting Future Cash Burn
-        def linear_regression_forecast(cash_burn_data):
-            if len(cash_burn_data) < 2:
-                return 0
-            X = np.array(range(len(cash_burn_data))).reshape(-1, 1)
-            y = np.array(cash_burn_data.values)
-            model = LinearRegression()
-            model.fit(X, y)
-            future_month = np.array([[len(cash_burn_data)]])
-            return model.predict(future_month)[0]
-
-        # Forecast for Next Month's Cash Burn
-        forecast_cash_burn = linear_regression_forecast(recent_purchases["CASH_BURN"])
-        st.markdown(f"**Cash Burn Forecast for Next Month:** £{forecast_cash_burn:,.0f}")
-
-        # Display Cash Burn Visualization
-        fig_cash_burn = px.line(
-            recent_purchases, x="MONTH", y="CASH_BURN",
-            title="Cash Burn (Last 3 Months)"
-        )
-        st.plotly_chart(fig_cash_burn, use_container_width=True)
-
-        # Top 3 Categories by Cash Burn
-        top_3_categories = (
-            recent_purchases.groupby("PURCHASE_CATEGORY")["CASH_BURN"]
-            .sum()
-            .sort_values(ascending=False)
-            .head(3)
-            .reset_index()
+        ]
+        recent_purchases = recent_purchases.rename(
+            columns={"OPERATING_EXPENSES": "CASH_BURN"}
         )
 
-        # Predict Cash Burn for each top category
-        for category in top_3_categories["PURCHASE_CATEGORY"]:
-            category_data = recent_purchases[recent_purchases["PURCHASE_CATEGORY"] == category]
-            next_month_cash_burn = linear_regression_forecast(category_data["CASH_BURN"])
-            top_3_categories.loc[
-                top_3_categories["PURCHASE_CATEGORY"] == category,
-                "Next Month Prediction (£)"
-            ] = f"£{next_month_cash_burn:,.0f}"
+# ML Model: Linear Regression for Predicting Future Cash Burn
+def linear_regression_forecast(cash_burn_data):
+    X = np.array(range(len(cash_burn_data))).reshape(-1, 1)
+    y = np.array(cash_burn_data.values)
 
-        # Format for display
-        top_3_categories["Total (£)"] = top_3_categories["CASH_BURN"].apply(lambda x: f"£{x:,.0f}")
-        st.dataframe(
-            top_3_categories[["PURCHASE_CATEGORY", "Total (£)", "Next Month Prediction (£)"]]
-            .rename(columns={"PURCHASE_CATEGORY": "Category"}),
-            use_container_width=True
-        )
+    model = LinearRegression()
+    model.fit(X, y)
+    future_month = np.array([[len(cash_burn_data)]])  # Predicting the next month
+    forecast = model.predict(future_month)
+    return forecast[0]
 
-        # Cash Burn Trend (Bar Chart)
-        burn_trend = (
-            recent_purchases.groupby(["MONTH", "PURCHASE_CATEGORY"])["CASH_BURN"]
-            .sum()
-            .reset_index()
-        )
+# Forecast for Next Month's Cash Burn
+forecast_cash_burn = linear_regression_forecast(recent_purchases["CASH_BURN"])
+st.markdown(f"**Cash Burn Forecast for Next Month:** £{forecast_cash_burn:,.0f}")
 
-        # ✅ Ensure MONTH is string before plotting
-        burn_trend["MONTH"] = burn_trend["MONTH"].astype(str)
+# Display Cash Burn Visualization
+fig_cash_burn["MONTH"] = fig_cash_burn["MONTH"].apply(lambda x: str(x))
+fig_cash_burn = px.line(recent_purchases, x="MONTH", y="CASH_BURN", title="Cash Burn (Last 3 Months)")
+st.plotly_chart(fig_cash_burn, use_container_width=True)
 
-        fig = px.bar(
-            burn_trend[burn_trend["PURCHASE_CATEGORY"].isin(top_3_categories["PURCHASE_CATEGORY"])],
-            x="MONTH", y="CASH_BURN", color="PURCHASE_CATEGORY",
-            barmode="group", title="📊 Monthly Cash Burn by Category (Top 3)"
-        )
-        fig.update_traces(texttemplate="£%{y:,.0f}")
-        st.plotly_chart(fig, use_container_width=True)
+# Predict next month's cash burn for top 3 categories
+top_3_categories = (
+    recent_purchases.groupby("PURCHASE_CATEGORY")["CASH_BURN"]
+    .sum()
+    .sort_values(ascending=False)
+    .head(3)
+    .reset_index()
+)
 
-    else:
-        st.warning("PURCHASE_CATEGORY or OPERATING_EXPENSES column not found in data.")
+# Predict Cash Burn for the Next Month (Linear Regression)
+for category in top_3_categories["PURCHASE_CATEGORY"]:
+    category_data = recent_purchases[recent_purchases["PURCHASE_CATEGORY"] == category]
+    next_month_cash_burn = linear_regression_forecast(category_data["CASH_BURN"])
+    top_3_categories.loc[top_3_categories["PURCHASE_CATEGORY"] == category, "Next Month Prediction (£)"] = f"£{next_month_cash_burn:,.0f}"
+
+# Show Top 3 Categories with Predicted Cash Burn for Next Month
+top_3_categories["Total (£)"] = top_3_categories["CASH_BURN"].apply(lambda x: f"£{x:,.0f}")
+top_3_categories["Predicted Next Month (£)"] = top_3_categories["Next Month Prediction (£)"]
+
+st.dataframe(
+    top_3_categories[["PURCHASE_CATEGORY", "Total (£)", "Predicted Next Month (£)"]]
+    .rename(columns={"PURCHASE_CATEGORY": "Category"}),
+    use_container_width=True
+)
+
+# 💸 Cash Burn Analysis
+st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
+
+if "PURCHASE_CATEGORY" in df.columns and "OPERATING_EXPENSES" in df.columns:
+    # Data Preprocessing for Cash Burn Analysis
+    recent_purchases = df[
+        df["MONTH"].isin(last_3_months) & df["PURCHASE_CATEGORY"].notnull()
+    ].copy()
+    recent_purchases = recent_purchases.rename(columns={"OPERATING_EXPENSES": "CASH_BURN"})
+
+    # ML Model: Linear Regression for Predicting Future Cash Burn
+    def linear_regression_forecast(cash_burn_data):
+        X = np.array(range(len(cash_burn_data))).reshape(-1, 1)
+        y = np.array(cash_burn_data.values)
+        model = LinearRegression()
+        model.fit(X, y)
+        future_month = np.array([[len(cash_burn_data)]])  # Predict next month
+        forecast = model.predict(future_month)
+        return forecast[0]
+
+    # Forecast for Next Month's Cash Burn
+    forecast_cash_burn = linear_regression_forecast(recent_purchases["CASH_BURN"])
+    st.markdown(f"**Cash Burn Forecast for Next Month:** £{forecast_cash_burn:,.0f}")
+
+    # Display Cash Burn Visualization
+    fig_cash_burn["MONTH"] = fig_cash_burn["MONTH"].apply(lambda x: str(x))
+fig_cash_burn = px.line(recent_purchases, x="MONTH", y="CASH_BURN", title="Cash Burn (Last 3 Months)")
+    st.plotly_chart(fig_cash_burn, use_container_width=True)
+
+    # Predict next month's cash burn for top 3 categories
+    top_3_categories = (
+        recent_purchases.groupby("PURCHASE_CATEGORY")["CASH_BURN"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(3)
+        .reset_index()
+    )
+
+    for category in top_3_categories["PURCHASE_CATEGORY"]:
+        category_data = recent_purchases[recent_purchases["PURCHASE_CATEGORY"] == category]
+        next_month_cash_burn = linear_regression_forecast(category_data["CASH_BURN"])
+        top_3_categories.loc[
+            top_3_categories["PURCHASE_CATEGORY"] == category, "Next Month Prediction (£)"
+        ] = f"£{next_month_cash_burn:,.0f}"
+
+    top_3_categories["Total (£)"] = top_3_categories["CASH_BURN"].apply(lambda x: f"£{x:,.0f}")
+    st.dataframe(
+        top_3_categories[["PURCHASE_CATEGORY", "Total (£)", "Next Month Prediction (£)"]]
+        .rename(columns={"PURCHASE_CATEGORY": "Category"}),
+        use_container_width=True
+    )
+
+    # Bar chart for Cash Burn Trend
+    burn_trend = (
+        recent_purchases.groupby(["MONTH", "PURCHASE_CATEGORY"])["CASH_BURN"]
+        .sum()
+        .reset_index()
+    )
+    burn_trend["MONTH"] = burn_trend["MONTH"].apply(lambda x: str(x))
+
+    fig = px.bar(
+        burn_trend[burn_trend["PURCHASE_CATEGORY"].isin(top_3_categories["Category"])],
+        x="MONTH",
+        y="CASH_BURN",
+        color="PURCHASE_CATEGORY",
+        barmode="group",
+        title="📊 Monthly Cash Burn by Category (Top 3)"
+    )
+    fig.update_traces(texttemplate="£%{y:,.0f}")
+    st.plotly_chart(fig, use_container_width=True)
+
+else:
+    st.warning("PURCHASE_CATEGORY or OPERATING_EXPENSES column not found in data.")
 
 # === Export Option ===
 st.markdown("### 📁 Export Raw Data")
