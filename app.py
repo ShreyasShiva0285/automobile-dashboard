@@ -490,7 +490,6 @@ st.dataframe(
 )
 
 # 💸 Cash Burn Analysis
-st.markdown("#### 💸 Cash Burn Analysis (Last 3 Months)")
 
 if "PURCHASE_CATEGORY" in df.columns and "OPERATING_EXPENSES" in df.columns:
     # Data Preprocessing for Cash Burn Analysis
